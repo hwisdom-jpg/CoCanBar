@@ -1,0 +1,9 @@
+.DS_Store
+/.build/
+/build/
+/.swiftpm/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+# 本地核对用的截图（有实机数据）；README 用的演示截图在 docs/screenshots/
+/截图/

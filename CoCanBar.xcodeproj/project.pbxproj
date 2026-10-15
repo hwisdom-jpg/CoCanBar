@@ -1,0 +1,564 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C0CA00000000000000000001 /* libCoCanKit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0CA00000000000000000002 /* libCoCanKit.a */; };
+		C0CA00000000000000000003 /* libCoCanStyle.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0CA00000000000000000004 /* libCoCanStyle.a */; };
+		C0CA00000000000000000005 /* libCoCanKit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0CA00000000000000000002 /* libCoCanKit.a */; };
+		C0CA00000000000000000006 /* libCoCanStyle.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0CA00000000000000000004 /* libCoCanStyle.a */; };
+		C0CA00000000000000000007 /* CoCanBarWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C0CA00000000000000000008 /* CoCanBarWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C0CA00000000000000000009 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C0CA0000000000000000000A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0CA0000000000000000000B;
+			remoteInfo = CoCanKit;
+		};
+		C0CA0000000000000000000C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C0CA0000000000000000000A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0CA0000000000000000000B;
+			remoteInfo = CoCanKit;
+		};
+		C0CA0000000000000000000D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C0CA0000000000000000000A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0CA0000000000000000000E;
+			remoteInfo = CoCanStyle;
+		};
+		C0CA0000000000000000000F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C0CA0000000000000000000A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0CA00000000000000000010;
+			remoteInfo = CoCanBarWidget;
+		};
+		C0CA00000000000000000011 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C0CA0000000000000000000A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0CA0000000000000000000B;
+			remoteInfo = CoCanKit;
+		};
+		C0CA00000000000000000012 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C0CA0000000000000000000A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0CA0000000000000000000E;
+			remoteInfo = CoCanStyle;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C0CA00000000000000000013 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C0CA00000000000000000007 /* CoCanBarWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		C0CA00000000000000000002 /* libCoCanKit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCoCanKit.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0CA00000000000000000004 /* libCoCanStyle.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCoCanStyle.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0CA00000000000000000014 /* CoCanBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CoCanBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0CA00000000000000000008 /* CoCanBarWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CoCanBarWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		C0CA00000000000000000015 /* CoCanKit */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources/CoCanKit;
+			sourceTree = "<group>";
+		};
+		C0CA00000000000000000016 /* CoCanStyle */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources/CoCanStyle;
+			sourceTree = "<group>";
+		};
+		C0CA00000000000000000017 /* CoCanBar */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources/CoCanBar;
+			sourceTree = "<group>";
+		};
+		C0CA00000000000000000018 /* CoCanBarWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources/CoCanBarWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C0CA00000000000000000019 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0CA0000000000000000001A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0CA0000000000000000001B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0CA00000000000000000001 /* libCoCanKit.a in Frameworks */,
+				C0CA00000000000000000003 /* libCoCanStyle.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0CA0000000000000000001C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0CA00000000000000000005 /* libCoCanKit.a in Frameworks */,
+				C0CA00000000000000000006 /* libCoCanStyle.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		C0CA0000000000000000001D = {
+			isa = PBXGroup;
+			children = (
+				C0CA00000000000000000015 /* CoCanKit */,
+				C0CA00000000000000000016 /* CoCanStyle */,
+				C0CA00000000000000000017 /* CoCanBar */,
+				C0CA00000000000000000018 /* CoCanBarWidget */,
+				C0CA0000000000000000001E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C0CA0000000000000000001E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C0CA00000000000000000002 /* libCoCanKit.a */,
+				C0CA00000000000000000004 /* libCoCanStyle.a */,
+				C0CA00000000000000000014 /* CoCanBar.app */,
+				C0CA00000000000000000008 /* CoCanBarWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C0CA0000000000000000000B /* CoCanKit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0CA00000000000000000020 /* Build configuration list for PBXNativeTarget "CoCanKit" */;
+			buildPhases = (
+				C0CA0000000000000000001F /* Sources */,
+				C0CA00000000000000000019 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C0CA00000000000000000015 /* CoCanKit */,
+			);
+			name = CoCanKit;
+			packageProductDependencies = (
+			);
+			productName = CoCanKit;
+			productReference = C0CA00000000000000000002 /* libCoCanKit.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		C0CA0000000000000000000E /* CoCanStyle */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0CA00000000000000000023 /* Build configuration list for PBXNativeTarget "CoCanStyle" */;
+			buildPhases = (
+				C0CA00000000000000000021 /* Sources */,
+				C0CA0000000000000000001A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C0CA00000000000000000022 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C0CA00000000000000000016 /* CoCanStyle */,
+			);
+			name = CoCanStyle;
+			packageProductDependencies = (
+			);
+			productName = CoCanStyle;
+			productReference = C0CA00000000000000000004 /* libCoCanStyle.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		C0CA00000000000000000028 /* CoCanBar */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0CA00000000000000000029 /* Build configuration list for PBXNativeTarget "CoCanBar" */;
+			buildPhases = (
+				C0CA00000000000000000024 /* Sources */,
+				C0CA0000000000000000001B /* Frameworks */,
+				C0CA00000000000000000013 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C0CA00000000000000000025 /* PBXTargetDependency */,
+				C0CA00000000000000000026 /* PBXTargetDependency */,
+				C0CA00000000000000000027 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C0CA00000000000000000017 /* CoCanBar */,
+			);
+			name = CoCanBar;
+			packageProductDependencies = (
+			);
+			productName = CoCanBar;
+			productReference = C0CA00000000000000000014 /* CoCanBar.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C0CA00000000000000000010 /* CoCanBarWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0CA0000000000000000002D /* Build configuration list for PBXNativeTarget "CoCanBarWidget" */;
+			buildPhases = (
+				C0CA0000000000000000002A /* Sources */,
+				C0CA0000000000000000001C /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C0CA0000000000000000002B /* PBXTargetDependency */,
+				C0CA0000000000000000002C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C0CA00000000000000000018 /* CoCanBarWidget */,
+			);
+			name = CoCanBarWidget;
+			packageProductDependencies = (
+			);
+			productName = CoCanBarWidget;
+			productReference = C0CA00000000000000000008 /* CoCanBarWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C0CA0000000000000000000A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					C0CA0000000000000000000B = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					C0CA0000000000000000000E = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					C0CA00000000000000000028 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					C0CA00000000000000000010 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = C0CA0000000000000000002E /* Build configuration list for PBXProject "CoCanBar" */;
+			developmentRegion = "zh-Hans";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				"zh-Hans",
+				Base,
+			);
+			mainGroup = C0CA0000000000000000001D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = C0CA0000000000000000001E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C0CA00000000000000000028 /* CoCanBar */,
+				C0CA00000000000000000010 /* CoCanBarWidget */,
+				C0CA0000000000000000000B /* CoCanKit */,
+				C0CA0000000000000000000E /* CoCanStyle */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C0CA0000000000000000001F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0CA00000000000000000021 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0CA00000000000000000024 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0CA0000000000000000002A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C0CA00000000000000000022 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0CA0000000000000000000B /* CoCanKit */;
+			targetProxy = C0CA00000000000000000009 /* PBXContainerItemProxy */;
+		};
+		C0CA00000000000000000025 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0CA0000000000000000000B /* CoCanKit */;
+			targetProxy = C0CA0000000000000000000C /* PBXContainerItemProxy */;
+		};
+		C0CA00000000000000000026 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0CA0000000000000000000E /* CoCanStyle */;
+			targetProxy = C0CA0000000000000000000D /* PBXContainerItemProxy */;
+		};
+		C0CA00000000000000000027 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0CA00000000000000000010 /* CoCanBarWidget */;
+			targetProxy = C0CA0000000000000000000F /* PBXContainerItemProxy */;
+		};
+		C0CA0000000000000000002B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0CA0000000000000000000B /* CoCanKit */;
+			targetProxy = C0CA00000000000000000011 /* PBXContainerItemProxy */;
+		};
+		C0CA0000000000000000002C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0CA0000000000000000000E /* CoCanStyle */;
+			targetProxy = C0CA00000000000000000012 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		C0CA0000000000000000002F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "";
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		C0CA00000000000000000030 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "";
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		C0CA00000000000000000031 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		C0CA00000000000000000032 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		C0CA00000000000000000033 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		C0CA00000000000000000034 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		C0CA00000000000000000035 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Support/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.local.CoCanBar;
+				PRODUCT_NAME = CoCanBar;
+			};
+			name = Debug;
+		};
+		C0CA00000000000000000036 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Support/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.local.CoCanBar;
+				PRODUCT_NAME = CoCanBar;
+			};
+			name = Release;
+		};
+		C0CA00000000000000000037 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Support/Widget-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.local.CoCanBar.widget;
+				PRODUCT_NAME = CoCanBarWidget;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		C0CA00000000000000000038 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Support/Widget-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.local.CoCanBar.widget;
+				PRODUCT_NAME = CoCanBarWidget;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C0CA0000000000000000002E /* Build configuration list for PBXProject "CoCanBar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0CA0000000000000000002F /* Debug */,
+				C0CA00000000000000000030 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0CA00000000000000000020 /* Build configuration list for PBXNativeTarget "CoCanKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0CA00000000000000000031 /* Debug */,
+				C0CA00000000000000000032 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0CA00000000000000000023 /* Build configuration list for PBXNativeTarget "CoCanStyle" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0CA00000000000000000033 /* Debug */,
+				C0CA00000000000000000034 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0CA00000000000000000029 /* Build configuration list for PBXNativeTarget "CoCanBar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0CA00000000000000000035 /* Debug */,
+				C0CA00000000000000000036 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0CA0000000000000000002D /* Build configuration list for PBXNativeTarget "CoCanBarWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0CA00000000000000000037 /* Debug */,
+				C0CA00000000000000000038 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C0CA0000000000000000000A /* Project object */;
+}
