@@ -2,6 +2,8 @@
 
 简体中文 | [English](README.en.md)
 
+[![CI](https://github.com/yangyihang96/CoCanBar/actions/workflows/ci.yml/badge.svg)](https://github.com/yangyihang96/CoCanBar/actions/workflows/ci.yml)
+
 制糖工厂「小电拼」（CP02 / CoCan）的 Mac 菜单栏 app，非官方第三方工具：
 
 - **读数**：局域网 `http://<设备>/metrics.json`，每隔几秒读一次，不需要登录。
@@ -207,6 +209,8 @@
   - 桌面小组件扩展和快捷指令的元数据（`Metadata.appintents`）只有 Xcode 的构建流程会生成，所以正式包不用 SwiftPM 打。
   - 工程的四个目标直接引用 `Sources/` 下对应的文件夹，新增源文件不用改工程。
 - 用本机的 Apple Development 证书签名。签名身份固定，重新构建后钥匙串仍然信任这个 app。
+  - 还没有证书时，在 Xcode 的「设置 › 账户」里登录 Apple ID，选中团队后点「管理证书…」，加一张 Apple Development 证书。免费的 Apple ID 也可以。
+  - 有多张证书时，可以用环境变量 `CODESIGN_IDENTITY`（证书的 SHA-1 或名称）指定用哪张。
 - App Group 按证书的 Team ID 拼成 `<Team ID>.com.local.CoCanBar`，写进 `build/xcode/entitlements/` 里的权限文件。
   - macOS 上这种写法不需要描述文件。
   - 小组件扩展是沙盒的（系统要求），另加出站网络权限（`com.apple.security.network.client`），用来在 app 没运行时读局域网；它的 Info.plist 也有 ATS 本地网络例外。菜单栏 app 不是沙盒的。
@@ -362,6 +366,7 @@ Support/                 app 和小组件的 Info.plist（LSUIElement、本地�
 CoCanBar.xcodeproj/      打包用的 Xcode 工程（小组件扩展和快捷指令元数据只能由它生成）
 scripts/                 打包签名（build-app.sh）、生成图标（make-icon.swift）
 docs/screenshots/        README 里的截图（演示数据）
+.github/workflows/       CI：每次推送用 SwiftPM 构建并跑单元测试
 ```
 
 ## 许可证

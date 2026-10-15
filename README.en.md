@@ -2,6 +2,8 @@
 
 [简体中文](README.md) | English
 
+[![CI](https://github.com/yangyihang96/CoCanBar/actions/workflows/ci.yml/badge.svg)](https://github.com/yangyihang96/CoCanBar/actions/workflows/ci.yml)
+
 An unofficial macOS menu bar app for CANDYSIGN (制糖工厂) 小电拼 chargers (CP02 / CoCan). It is a third-party tool, not affiliated with or endorsed by CANDYSIGN. The interface is in Simplified Chinese; Chinese labels are quoted below with an English gloss.
 
 - **Readings**: the LAN endpoint `http://<charger>/metrics.json`, read every few seconds, no login needed.
@@ -206,6 +208,8 @@ Requires Xcode (verified with Xcode 27 / Swift 6.4 / macOS 27.2).
   - The widget extension and the Shortcuts metadata (`Metadata.appintents`) are produced only by Xcode's build process, so release builds aren't made with SwiftPM.
   - The project's four targets reference the matching folders under `Sources/` directly; adding source files doesn't require editing the project.
 - It signs with this Mac's Apple Development certificate. The signing identity stays the same, so the Keychain keeps trusting the app after rebuilds.
+  - If you don't have one yet, sign in with your Apple ID under Xcode › Settings › Accounts, select the team, click Manage Certificates… and add an Apple Development certificate. A free Apple ID works.
+  - With several certificates, set the `CODESIGN_IDENTITY` environment variable (the certificate's SHA-1 or name) to choose one.
 - The App Group is `<Team ID>.com.local.CoCanBar`, built from the certificate's Team ID and written into the entitlements files in `build/xcode/entitlements/`.
   - On macOS this form needs no provisioning profile.
   - The widget extension is sandboxed (a system requirement) and also gets the outgoing network entitlement (`com.apple.security.network.client`) for LAN reads while the app isn't running; its Info.plist also has the ATS local networking exception. The menu bar app isn't sandboxed.
@@ -361,6 +365,7 @@ Support/                 Info.plists for the app and widget (LSUIElement, Local 
 CoCanBar.xcodeproj/      Xcode project for packaging (only it can produce the widget extension and Shortcuts metadata)
 scripts/                 packaging and signing (build-app.sh), icon generation (make-icon.swift)
 docs/screenshots/        screenshots used in the README (demo data)
+.github/workflows/       CI: SwiftPM build and unit tests on every push
 ```
 
 ## License
