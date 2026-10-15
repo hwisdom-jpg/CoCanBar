@@ -78,7 +78,7 @@ enum MenuBarIcon {
     static func image(title: String, online: Bool) -> NSImage {
         let fontSize = NSFont.menuBarFont(ofSize: 0).pointSize
         let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
-        let textWidth = ceil(widthSamples.map { textWidth($0, font: font) }.max() ?? 0)
+        let textWidth = ceil(widthSamples.map { Self.textWidth($0, font: font) }.max() ?? 0)
         let symbolSize = symbol(online: online, pointSize: fontSize)?.size ?? NSSize(width: 10, height: fontSize)
         let lineHeight = ceil(font.ascender - font.descender)
         let size = NSSize(width: ceil(symbolSize.width) + 3 + textWidth, height: max(lineHeight, ceil(symbolSize.height)))
