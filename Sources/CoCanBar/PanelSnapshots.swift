@@ -241,6 +241,23 @@ enum PanelSnapshots {
         [1: PortDetail(portID: 1, sessionEnergyMWh: 1_600, temperature: .moderate)]
     }
 
+    /// 演示用的云端读数（结构照 2026-10-16 真机的 `get_port_details`，数值和上面的桌子一样）：
+    /// C1、C4 在充，C2 接着没取电但有 5V 输出（确定开着），A 和 C3 空着（开没开读不到）。
+    private static let deskCloudJSON = """
+    {"ports":[
+     {"port":1,"connected":false,"fc_protocol":"Not Charging","vout_mv":0,"iout_ma":0,"vin_mv":30270,
+      "die_temperature":"moderate","session_id":0,"session_charge_mwh":0},
+     {"port":2,"connected":true,"fc_protocol":"PD Fixed 20V","vout_mv":19968,"iout_ma":3250,"vin_mv":30250,
+      "die_temperature":"warm","session_id":12,"session_charge_mwh":25540},
+     {"port":3,"connected":true,"fc_protocol":"Not Charging","vout_mv":5000,"iout_ma":0,"vin_mv":30250,
+      "die_temperature":"cool","session_id":13,"session_charge_mwh":0},
+     {"port":4,"connected":false,"fc_protocol":"Not Charging","vout_mv":0,"iout_ma":0,"vin_mv":30210,
+      "die_temperature":"moderate","session_id":0,"session_charge_mwh":0},
+     {"port":5,"connected":true,"fc_protocol":"USB Legacy Charging","vout_mv":5088,"iout_ma":1359,"vin_mv":30190,
+      "die_temperature":"moderate","session_id":10,"session_charge_mwh":3420}
+    ]}
+    """
+
     /// 演示用的充电曲线（数值是编的，形状照实测）。最近 30 分钟当作从小电拼内存读到的，更早的当作本 app 记的，
     /// 中间有 20 分钟 app 没开。桌子 C1：25 分钟前插上笔记本，中间降过一段功率；更早充过一台手机。C4 一直是 5V 小电流。
     private static func demoHistory(now: Date) -> [String: [Int: PortHistory]] {
@@ -320,6 +337,25 @@ enum PanelSnapshots {
         offline.lastError = "请求超时（4 秒）"
         offline.failures = 6
 
+        // Mac 不在家：桌子改读云端，10 分钟前在本机关过 C3；沙发局域网和云端都读不到
+        let cloudJSON = JSONValue.parse(deskCloudJSON)
+        var cloud = DeviceRuntime()
+        cloud.metrics = CloudReading.metrics(from: cloudJSON)
+        cloud.lastSuccess = Date()
+        cloud.source = .cloud
+        cloud.failures = 12
+        cloud.lastError = LANError.unresolved("cp02-desk.local").localizedDescription
+        cloud.control = loaded
+        cloud.identity = IdentityState(ports: deskIdentities, details: PortDetail.parse(cloudJSON),
+                                       signature: (cloud.metrics?.ports).map(PortIdentity.signature(of:)), loadedAt: Date())
+        cloud.portCommands = [3: PortCommand(on: false, at: Date(timeIntervalSinceNow: -600))]
+
+        var unreachable = offline
+        unreachable.lastSuccess = Date(timeIntervalSinceNow: -1800)
+        unreachable.lastError = LANError.unresolved("cp02-sofa.local").localizedDescription
+        unreachable.cloudFailures = 3
+        unreachable.cloudError = "MCP 请求失败：网络连接已中断"
+
         let both: Set = [deskPSN, sofaPSN]
         let history = demoHistory(now: Date())
         return [
@@ -352,6 +388,10 @@ enum PanelSnapshots {
                 configured: both),
                 presets: [sparePSN: CardPreset(selected: 0)]),
             Scenario(name: "6-没有设备", model: AppModel(snapshotDevices: [], runtime: [:], configured: [])),
+            Scenario(name: "7-云端读数", model: AppModel(
+                snapshotDevices: [desk, sofa], runtime: [deskPSN: cloud, sofaPSN: unreachable],
+                configured: both, history: history),
+                presets: [deskPSN: CardPreset(selected: 3)]),
         ]
     }
 }

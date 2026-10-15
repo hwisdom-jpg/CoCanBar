@@ -37,6 +37,31 @@ final class SharedStateTests: XCTestCase {
         XCTAssertNil(store.readSnapshot()?.device("OTHER"))
     }
 
+    func testCloudFieldsRoundTrip() throws {
+        var original = snapshot()
+        original.devices[0].viaCloud = true
+        original.devices[0].ports[0].poweredOn = nil
+        original.devices[0].ports[1].protocolText = "Apple 2.4A"
+        try store.writeSnapshot(original)
+        let read = try XCTUnwrap(store.readSnapshot()?.devices.first)
+        XCTAssertEqual(read.viaCloud, true)
+        XCTAssertNil(read.ports[0].poweredOn)
+        XCTAssertFalse(read.ports[0].inUse)
+        XCTAssertEqual(read.ports[1].protocolText, "Apple 2.4A")
+    }
+
+    func testOlderSnapshotWithoutCloudFieldsDecodes() throws {
+        // 局域网读数的快照不写 viaCloud、protocolText，和旧版本写出的一样；开关状态照常写出、照常读回
+        try store.writeSnapshot(snapshot())
+        let text = try String(contentsOf: directory.appendingPathComponent("snapshot.json"), encoding: .utf8)
+        XCTAssertFalse(text.contains("viaCloud"))
+        XCTAssertFalse(text.contains("protocolText"))
+        XCTAssertTrue(text.contains("poweredOn"))
+        let read = try XCTUnwrap(store.readSnapshot()?.devices.first)
+        XCTAssertNil(read.viaCloud)
+        XCTAssertEqual(read.ports.map(\.poweredOn), [true, true])
+    }
+
     func testPortInUseNeedsPowerAndDevice() {
         XCTAssertTrue(port(1, attached: true, watts: 5).inUse)
         XCTAssertTrue(port(1, attached: true).inUse)
@@ -141,6 +166,13 @@ final class SharedStateTests: XCTestCase {
         var switchedOff = base
         switchedOff.devices[0].ports[0].poweredOn = false
         XCTAssertEqual(switchedOff.change(since: base), .state)
+        // 改读云端（开关变灰）、开关状态变成未知，也要马上刷新
+        var viaCloud = base
+        viaCloud.devices[0].viaCloud = true
+        XCTAssertEqual(viaCloud.change(since: base), .state)
+        var unknown = base
+        unknown.devices[0].ports[0].poweredOn = nil
+        XCTAssertEqual(unknown.change(since: base), .state)
         XCTAssertTrue(WidgetSnapshot.Change.none < .readings && WidgetSnapshot.Change.readings < .state)
     }
 

@@ -6,7 +6,7 @@
 
 An unofficial macOS menu bar app for CANDYSIGN (制糖工厂) 小电拼 chargers (CP02 / CoCan). It is a third-party tool, not affiliated with or endorsed by CANDYSIGN. The interface is in Simplified Chinese; Chinese labels are quoted below with an English gloss.
 
-- **Readings**: the LAN endpoint `http://<charger>/metrics.json`, read every few seconds, no login needed.
+- **Readings**: the LAN endpoint `http://<charger>/metrics.json`, read every few seconds, no login needed. When the Mac isn't on the charger's network, chargers with an MCP URL switch to cloud readings from the official MCP, every 15 seconds. See "Away from the charger's network".
 - **Control**: the official MCP (`mcp.thecandysign.com`). The MCP URL contains a token and is stored only in the Keychain.
 - **Identification**: what is connected to each port, battery level, PD profile and cable, read with read-only tools of the official MCP. See "Device identification".
 - **Temperature, energy, curves**: each port's chip temperature level, energy delivered in the current session, and power curves for the last 30 minutes to 2 hours (still there after relaunching the app). See "Chip temperature, session energy and charging curves".
@@ -146,6 +146,28 @@ All of these need an MCP URL; every MCP tool they use is read-only.
   - `get_port_stats` points have no timestamps. They're laid out backwards on the assumption that the last one is the newest, so times can be off by a few seconds.
     The order was confirmed in testing: two reads 46 seconds apart shifted the series left by exactly 4 points.
 
+## Away from the charger's network
+
+When the Mac is away from home, or the charger has moved to another network, the LAN can't be read. Chargers with an MCP URL then switch to cloud readings:
+
+- After two LAN reads in a row fail, the app reads the MCP's read-only `get_port_details` tool every 15 seconds instead, backing off to 30 and 60 seconds while it keeps failing. As soon as the LAN answers again, it switches back.
+- The pill next to the card title says 「云端」 (cloud), and the status ends with 「云端读数」 (cloud readings). The widget adds 「云端」 after the reading time, and the 「读取小电拼状态」 (get status) shortcut says so as well.
+- The cloud provides, per port: whether a device is connected, output voltage and current, input voltage, protocol, chip temperature, session energy and session number. It doesn't provide the on/off state, charging duration or power allocation.
+- On/off state:
+  - A port with a device connected and output voltage (3 V or more) is certainly on, so it gets its switch as usual; turning off a port in use still asks first.
+  - For other ports (empty, or connected without output) the state is unknown: the bar shows 「–」, and when selected the detail strip shows two buttons, 「打开」 (turn on) and 「关闭」 (turn off), instead of a switch.
+    If you switched that port from this Mac during this run, the strip says when it was turned on or off here.
+  - The bitmask of `get_charging_status` means "device attached" (set even when the device draws no power), not on/off, so it isn't used.
+- While readings come from the cloud, the widget's switches are greyed out and its footer points to the menu bar panel: the widget draws its switches from the snapshot, and with an unknown state a tap might not go the way you expect.
+- The get power and get status shortcuts, and the widget's refresh button, read the cloud right away when the LAN can't be reached, without waiting for the 15 seconds.
+- Charging curves keep recording: one point every 15 seconds, so the curve stays connected (it only breaks when two points are more than 30 seconds apart).
+- When neither the LAN nor the cloud can be read, the card shows 「局域网和云端都读不到」 (neither LAN nor cloud readable) with the cloud's error. Chargers without an MCP URL can only be read over the LAN and show as offline away from it.
+- To see the away-from-home behaviour at home, launch with `--cloud-only`; the app then skips the LAN and uses cloud readings only:
+
+  ```bash
+  open build/小电拼.app --args --cloud-only
+  ```
+
 ## Desktop widget
 
 Right-click an empty area of the desktop → 「编辑小组件」 (Edit Widgets), search for 小电拼, and drag it to the desktop or Notification Center. Right-click the widget → 「编辑“小电拼”」 to choose which charger it shows; without a choice it shows the first one.
@@ -154,7 +176,7 @@ Right-click an empty area of the desktop → 「编辑小组件」 (Edit Widgets
 - Medium: adds the combined power trend of the last 30 minutes, with each port's device name and power on the right.
 - Large: each port's device, battery level, power, voltage, protocol, session energy, chip temperature and switch; the bottom shows the energy delivered across ports in their current sessions, or a notice.
   - Turning off a port in use takes two taps: the first turns the switch into a red 「关闭？」 (turn off?), and only a second tap within 10 seconds sends the command.
-  - Chargers without an MCP URL show no switches. Switches are greyed out while the menu bar app isn't running, the charger is offline, the reading is stale or another operation is in progress.
+  - Chargers without an MCP URL show no switches. Switches are greyed out while the menu bar app isn't running, the charger is offline, the reading is stale, readings come from the cloud or another operation is in progress.
 - All three sizes have a refresh button at the top right.
 - Colours match the panel; port colours follow the charging strategy this app last set.
 - While the menu bar app is running:
@@ -173,7 +195,7 @@ Right-click an empty area of the desktop → 「编辑小组件」 (Edit Widgets
 - How switch commands are sent:
   - The widget can't get the MCP token. When a switch is tapped, it writes a command (which charger, which port, on or off) to the shared folder and posts a notification to wake the menu bar app.
   - The app checks the command and sends it with the MCP URL from its own Keychain; the result is shown at the bottom of the widget.
-  - The app executes only commands that were issued within the last 15 seconds, for a charger that has been added, has an MCP URL, is online and has that port.
+  - The app executes only commands that were issued within the last 15 seconds, for a charger that has been added, has an MCP URL, is online with LAN readings and has that port.
   - Switches are greyed out while the app isn't running. If the app happens to quit unexpectedly and doesn't reply within 3 seconds, the widget withdraws the command and shows a notice; the app won't execute it when it opens later.
 - The app has to be packaged with `scripts/build-app.sh` on a Mac with an Apple Development certificate: the app and the widget share data through an App Group. With ad-hoc signing the widget gets no data.
 
@@ -191,7 +213,7 @@ Search for 小电拼 in the Shortcuts app. The actions run in the menu bar app; 
 | 设置小电拼屏幕亮度 (set display brightness) | Charger, off / low / medium / high | Completion message |
 
 - Without a charger chosen, the first one is used.
-- Readings go over the LAN, so the Mac has to be on the same network as the charger. Control goes through the official MCP and also works from other networks, but the MCP URL has to be set up in the app first.
+- Readings go over the LAN; away from the charger's network, chargers with an MCP URL switch to cloud readings (see "Away from the charger's network"). Control goes through the official MCP and also works from other networks, but the MCP URL has to be set up in the app first.
 - Both confirmations are on by default and ask first, as the panel does. They can be turned off for automations.
 - Get power, get status, switch port and change charging strategy are also registered as App Shortcuts (「用小电拼读取功率」 and so on), so they can be found without building a shortcut.
 - As with the widget, the app has to be packaged with `scripts/build-app.sh`: the actions' metadata is generated only by Xcode's build process.
@@ -261,8 +283,9 @@ open build/小电拼.app --args --import <file containing MCP URLs> --rename <PS
   - When the IP changes, or a minute has passed, the PSN on the charger's home page is checked.
   - When a different charger answers at the address, its readings aren't shown, so you don't switch ports based on the wrong charger's state.
 - The LAN interface itself has no authentication; any device on the same network can read it. That's the firmware's behaviour, not something this app adds.
+- Cloud readings are only made while the LAN can't be read, with the MCP's read-only `get_port_details` tool (which device identification already uses), every 15 seconds, through the same MCP URL from the Keychain.
 - The widget's data lives in the App Group container `~/Library/Group Containers/<Team ID>.com.local.CoCanBar/`:
-  - `snapshot.json`: charger names, PSNs, host names and the LAN IP the app last used, online status, per-port readings and session numbers, and the session energy ratio; no MCP URLs or tokens.
+  - `snapshot.json`: charger names, PSNs, host names and the LAN IP the app last used, online status, whether readings come from the cloud, per-port readings and session numbers, and the session energy ratio; no MCP URLs or tokens.
   - `lan/<PSN>.json`: what the widget read by itself while the app wasn't running, one file per charger.
   - `commands/`, `replies/`: switch commands from the widget and the app's replies, deleted once handled.
   - `pending.json`, `notice.json`: the widget's own pending confirmation and notices.
@@ -286,12 +309,14 @@ swift build --product cocan-probe
 .build/debug/cocan-probe mcp <file containing the MCP URL> <PSN> get_charging_status
 .build/debug/cocan-probe mcp <file containing the MCP URL> <PSN> --identify
 .build/debug/cocan-probe mcp <file containing the MCP URL> <PSN> --history C1
+.build/debug/cocan-probe mcp <file containing the MCP URL> <PSN> --cloud
 ```
 
 - `lan-check` reads once the way the widget does while the app isn't running: it resolves `cp02-<PSN>.local` (a host name or IP can also follow the PSN), checks the PSN on the home page, then reads live data. It prints the total power, number of ports and time taken, without the PSN or address.
 - `mcp` without a tool name lists the tools; `--schema` prints each tool's description and parameter schema; with a tool name it calls that tool.
 - `--identify` identifies each port's device with the app's rules and prints the model, vendor ID, PD profile, battery level, cable, chip temperature and session energy for each port.
 - `--history C1` prints how many points that port has in the charger's memory for the last 30 minutes, their time range, average and peak, and the last 6 points.
+- `--cloud` reads cloud readings once, the way the app does when the LAN can't be reached, and prints each port's on/off state (「未知」, unknown, when it can't be told), connection, voltage, current, power, protocol, chip temperature and session energy, in a format close to `lan` for comparison.
 - Only read-only tools whose names start with `get_` are allowed by default; write operations such as switching ports or changing the strategy need `--allow-write`.
 
 ## Debugging (Debug builds only)
@@ -311,7 +336,8 @@ swift build
   3. turn-off confirmation and command in progress;
   4. offline and notices;
   5. errors while connecting, and read-only;
-  6. no chargers.
+  6. no chargers;
+  7. cloud readings (LAN unreachable: one charger on cloud readings, one reachable neither way).
 - `--demo-window`: puts the panel in an ordinary window right below the main screen's menu bar. On recent macOS versions menu bar items are hosted by a system process, so a MenuBarExtra panel can't be opened from the program; an ordinary window shows the real rendering instead.
 - `--demo-settings [devices|general]`: opens a settings page in another window, the Adjust tab by default.
 - `--demo-menu`: opens the first card's 「调节」 menu once the window is up.
@@ -332,7 +358,12 @@ swift build
 - The LAN ratio for session energy is an empirical value that the firmware doesn't document; when the MCP can't be read, no energy is shown.
 - Charging curves cover at most 2 hours. For periods when the app wasn't running, only the last 30 minutes can be filled in from the charger's memory; anything older has no record.
 - The mini program's 「电量统计」 (energy statistics: today, daily peak, total) uses CANDYSIGN's own cloud API, and the MCP has no matching tool, so it isn't here.
-- Control depends on the official cloud; without internet access only readings work.
+- Control depends on the official cloud; without internet access only LAN readings work.
+- Cloud readings (away from the charger's network):
+  - There's no on/off state: for empty ports, and ports with a device that draws no power, it can't be told whether they're on. See "Away from the charger's network".
+  - Protocols come as English names. `Not Charging`, `USB Legacy Charging` and `PD Fixed 5V` have been seen; other names are matched against the mini program's names, and unrecognized ones are shown as given.
+  - They're read every 15 seconds and each read goes through the official cloud, so they're slower than the LAN. On 2026-10-16, LAN and cloud readings taken right after each other on two CP02 Pro chargers matched in voltage, current, protocol and connection state, differing only by power changes over time.
+  - Not yet used with the Mac actually away from the home network: verification used `cocan-probe --cloud` and the app's `--cloud-only`.
 - How `metrics.json` reports a port that has been turned off (the `active` / `state` values) hasn't been confirmed in testing. For now `INACTIVE` is treated as off, following the firmware source.
 - CP02S display options haven't been tested on a real CP02S. The field names in `get_display_config` are undocumented and are currently recognized by their values.
 - Power allocation behaviour is inferred from the open-source firmware source and hasn't been tested.

@@ -349,6 +349,8 @@ struct DeviceCard: View {
 
     private var state: DeviceRuntime { model.runtime[device.psn] ?? DeviceRuntime() }
     private var online: Bool { model.isOnline(device.psn) }
+    /// 读数来自云端（Mac 连不上设备的局域网）。
+    private var cloud: Bool { model.isCloud(device.psn) }
     private var configured: Bool { model.mcpConfigured.contains(device.psn) }
     private var ports: [PortMetrics] { (state.metrics?.ports ?? []).sorted { $0.id < $1.id } }
     private var canControl: Bool { configured && online && state.busy == nil }
@@ -419,7 +421,7 @@ struct DeviceCard: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Palette.heading)
                 .lineLimit(1)
-            StatusBadge(status: badgeStatus)
+            StatusBadge(status: badgeStatus, text: cloud ? "云端" : nil)
             Spacer(minLength: 6)
             Text(statusText)
                 .font(.system(size: 10.5))
@@ -438,7 +440,8 @@ struct DeviceCard: View {
     private var statusText: String {
         if online {
             let charging = state.metrics?.chargingCount ?? 0
-            return charging > 0 ? "\(charging) 口在充" : "空闲"
+            let text = charging > 0 ? "\(charging) 口在充" : "空闲"
+            return cloud ? text + " · 云端读数" : text
         }
         if state.lastError == nil { return "" }
         return state.metrics == nil ? "" : "上次的读数"
@@ -537,7 +540,12 @@ struct DeviceCard: View {
                 Image(systemName: "wifi.exclamationmark")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
-                twoLines(state.metrics == nil ? "连不上设备" : "离线，显示的是上次的读数", error)
+                if let cloudError = state.cloudError {
+                    // 配好 MCP 的设备连不上局域网时会改读云端，这时还离线就是两边都读不到
+                    twoLines("局域网和云端都读不到", cloudError)
+                } else {
+                    twoLines(state.metrics == nil ? "连不上设备" : "离线，显示的是上次的读数", error)
+                }
             }
         case .connecting:
             HStack(spacing: 7) {
@@ -592,14 +600,24 @@ struct DeviceCard: View {
                     .help("芯片温度：\(temperature.label)")
                     .accessibilityLabel("芯片温度\(temperature.label)")
             }
-            PortSwitch(isOn: port.isPoweredOn, enabled: canControl, name: name) { toggle(port) }
-                .help(switchHelp(port, name: name))
+            if port.isPoweredOn != nil {
+                PortSwitch(isOn: port.isPoweredOn == true, enabled: canControl, name: name) { toggle(port) }
+                    .help(switchHelp(port, name: name))
+            } else {
+                PowerButtons(enabled: canControl, name: name) { on in
+                    Task { await model.setPort(psn: device.psn, index: port.id, on: on) }
+                }
+            }
         }
     }
 
     /// 认出了设备时，标题是“C1 · iPhone 15 Pro · 电量 76%”；没认出时照旧显示协议和已充时长。
     private func portTitle(_ port: PortMetrics, name: String) -> String {
-        if !port.isPoweredOn { return "\(name) · 已关闭" }
+        guard let on = port.isPoweredOn else {
+            // 云端读不到开关状态：只说看得到的
+            return port.attached ? "\(name) · 已连接，没有供电" : "\(name) · 没接设备"
+        }
+        if !on { return "\(name) · 已关闭" }
         if let identity = model.identity(device.psn, port: port), let deviceName = identity.displayName {
             var parts = [name, deviceName]
             if let battery = identity.battery {
@@ -610,7 +628,7 @@ struct DeviceCard: View {
             return parts.joined(separator: " · ")
         }
         if port.isCharging {
-            var parts = [name, FastChargeProtocol.name(port.fcProtocol)]
+            var parts = [name, port.protocolName]
             if port.chargingDurationSeconds > 0 {
                 parts.append("已充 \(PanelFormat.duration(port.chargingDurationSeconds))")
             }
@@ -620,7 +638,7 @@ struct DeviceCard: View {
     }
 
     private func portLine(_ port: PortMetrics) -> String {
-        if port.isPoweredOn && port.attached {
+        if port.isInUse {
             var text = String(format: "%.2f V · %.2f A · %.2f W", port.volts, port.amps, port.watts)
             // 本次电量比分配功率更常看；两样都放会挤掉读数，分配功率留在悬停说明里
             if let energy = model.sessionEnergy(device.psn, port: port) {
@@ -630,8 +648,17 @@ struct DeviceCard: View {
             }
             return text
         }
+        if port.isPoweredOn == nil { return unknownPowerLine(port) }
         if !configured { return "只读：保存 MCP 地址后才能开关" }
-        return port.isPoweredOn ? "没有连接设备" : "打开后才供电"
+        return port.isPoweredOn == true ? "没有连接设备" : "打开后才供电"
+    }
+
+    /// 云端读不到开关状态时说明一句；本机发过开关命令的话改写这条（这是有依据的）。旁边有两个按钮，要写短，
+    /// 读不到状态的说明在悬停说明里。
+    private func unknownPowerLine(_ port: PortMetrics) -> String {
+        guard let command = state.portCommands[port.id] else { return "云端读不到开关状态" }
+        let time = command.at.formatted(date: .omitted, time: .shortened)
+        return "\(time) 在本机\(command.on ? "打开" : "关闭")过"
     }
 
     /// 鼠标停在详情条上时显示识别出的全部信息，以及本次电量、芯片温度和分配功率。
@@ -652,13 +679,14 @@ struct DeviceCard: View {
         if port.attached, port.powerBudgetWatts > 0 {
             lines.append("分配 \(port.powerBudgetWatts) W")
         }
+        if cloud { lines.append("云端读数（每 15 秒）：没有开关状态、充电时长和分配功率") }
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
     private func switchHelp(_ port: PortMetrics, name: String) -> String {
         if !configured { return "需要先在设置里保存 MCP 地址" }
         if !online { return "设备离线" }
-        return port.isPoweredOn ? "关闭 \(name)" : "打开 \(name)"
+        return port.isPoweredOn == true ? "关闭 \(name)" : "打开 \(name)"
     }
 
     @ViewBuilder
@@ -677,7 +705,7 @@ struct DeviceCard: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 4)
-                Text("点端口看详情")
+                Text(cloud ? "云端读数，每 15 秒更新" : "点端口看详情")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.tertiary)
             }
@@ -716,12 +744,13 @@ struct DeviceCard: View {
     }
 
     private func toggle(_ port: PortMetrics) {
+        guard let on = port.isPoweredOn else { return }
         // 关掉正在用的口前先确认
         if port.isInUse {
             withAnimation(.snappy) { pendingOff = port.id }
             return
         }
-        Task { await model.setPort(psn: device.psn, index: port.id, on: !port.isPoweredOn) }
+        Task { await model.setPort(psn: device.psn, index: port.id, on: !on) }
     }
 
     private func confirmOff() {

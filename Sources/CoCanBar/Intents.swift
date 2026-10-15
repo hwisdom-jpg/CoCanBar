@@ -159,9 +159,9 @@ extension AppModel {
         return device
     }
 
-    /// 先读一次最新数据；读不到就报不在线。
+    /// 先读一次最新数据（局域网读不到时马上读云端）；读不到就报不在线。
     func freshMetrics(_ device: DeviceConfig) async throws -> DeviceMetrics {
-        await refresh(device.psn)
+        await refresh(device.psn, cloudNow: true)
         guard isOnline(device.psn), let metrics = runtime[device.psn]?.metrics else {
             throw ChargerIntentError.offline(device.name)
         }
@@ -250,10 +250,16 @@ struct ReadChargerStatusIntent: AppIntent {
         let model = try await AppModel.ready()
         let device = try model.intentDevice(charger)
         let metrics = try await model.freshMetrics(device)
-        var lines = ["\(device.name)：合计 \(PanelFormat.watts(metrics.totalWatts)) W"]
+        let source = model.isCloud(device.psn) ? "（云端读数）" : ""
+        var lines = ["\(device.name)：合计 \(PanelFormat.watts(metrics.totalWatts)) W\(source)"]
         for port in metrics.ports {
             let name = PortNaming.name(index: port.id)
-            guard port.isPoweredOn else {
+            guard let on = port.isPoweredOn else {
+                // 云端读不到开关状态，只说看得到的
+                lines.append("\(name)：\(port.attached ? "已连接，没有供电" : "没接设备")（开关状态未知）")
+                continue
+            }
+            guard on else {
                 lines.append("\(name)：已关闭")
                 continue
             }
@@ -264,7 +270,7 @@ struct ReadChargerStatusIntent: AppIntent {
             var parts = ["\(PanelFormat.watts(port.watts)) W"]
             if port.watts > 0 {
                 parts.append(PanelFormat.volts(port.volts))
-                let protocolName = PanelFormat.shortProtocol(port.fcProtocol)
+                let protocolName = port.shortProtocol
                 if !protocolName.isEmpty { parts.append(protocolName) }
             }
             if let identity = model.identity(device.psn, port: port) {

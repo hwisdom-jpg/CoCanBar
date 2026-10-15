@@ -7,11 +7,12 @@ enum PortKind: Equatable {
     case unknown, off, idle, standby, charging
 
     init(_ port: PortMetrics?) {
-        guard let port else {
+        // 没有读数，或者云端读不到开关状态（没在供电的口）：画成空槽，不猜开没开
+        guard let port, let on = port.isPoweredOn else {
             self = .unknown
             return
         }
-        if !port.isPoweredOn {
+        if !on {
             self = .off
         } else if port.isCharging {
             self = .charging
@@ -217,7 +218,7 @@ private struct PortColumn: View {
 
     private var protocolText: String {
         guard let port else { return "" }
-        let short = PanelFormat.shortProtocol(port.fcProtocol)
+        let short = port.shortProtocol
         let volts = PanelFormat.volts(port.volts)
         return short.isEmpty ? volts : "\(short) \(volts)"
     }
@@ -228,7 +229,7 @@ private struct PortColumn: View {
         case .standby: return "已连接，未取电"
         case .idle: return "空闲"
         case .off: return "已关闭"
-        case .unknown: return "没有读数"
+        case .unknown: return "读不到状态"
         }
     }
 }
@@ -323,6 +324,25 @@ struct PortSwitch: View {
         .accessibilityRepresentation {
             Toggle("\(name) 口供电", isOn: Binding(get: { isOn }, set: { _ in action() }))
         }
+    }
+}
+
+/// 云端读不到开关状态的口：不画开关（画了就是在猜开没开），给「打开」「关闭」两个按钮。
+/// 这样的口都没在供电（在供电的口能确定开着），关掉不会让设备断电，所以不再确认。
+struct PowerButtons: View {
+    let enabled: Bool
+    let name: String
+    let action: (Bool) -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Button("打开") { action(true) }
+                .help("打开 \(name)（云端读不到它现在开没开）")
+            Button("关闭") { action(false) }
+                .help("关闭 \(name)（云端读不到它现在开没开）")
+        }
+        .buttonStyle(PillButtonStyle())
+        .disabled(!enabled)
     }
 }
 

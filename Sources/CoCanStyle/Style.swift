@@ -184,6 +184,15 @@ public enum PanelFormat {
     }
 }
 
+public extension PortMetrics {
+    /// 柱子旁边、快捷指令里用的协议简称；云端给的协议认不出编号时用原文。
+    var shortProtocol: String { protocolText ?? PanelFormat.shortProtocol(fcProtocol) }
+}
+
+public extension WidgetSnapshot.Port {
+    var shortProtocol: String { protocolText ?? PanelFormat.shortProtocol(fcProtocol) }
+}
+
 /// 在线状态的小胶囊：在线是绿底白字（小程序首页的「在线」），连接中和离线是灰的。
 public struct StatusBadge: View {
     public enum Status: Sendable {

@@ -20,7 +20,7 @@ final class CoCanKitTests: XCTestCase {
         XCTAssertEqual(metrics.totalWatts, 6.670368, accuracy: 0.000001)
         XCTAssertTrue(metrics.ports[1].isCharging)
         XCTAssertFalse(metrics.ports[0].isCharging)
-        XCTAssertTrue(metrics.ports[0].isPoweredOn)
+        XCTAssertEqual(metrics.ports[0].isPoweredOn, true)
         XCTAssertEqual(metrics.system?.appVersion, "2.2.0")
         // id 4 报 port_type "A"，但它是 C4
         XCTAssertEqual(PortNaming.name(index: metrics.ports[1].id), "C4")
@@ -162,7 +162,7 @@ final class CoCanKitTests: XCTestCase {
         let metrics = try JSONDecoder().decode(DeviceMetrics.self, from: Data(#"{"ports":[{"id":2,"state":"INACTIVE"}]}"#.utf8))
         let port = try XCTUnwrap(metrics.ports.first)
         XCTAssertEqual(port.fcProtocol, 255)
-        XCTAssertFalse(port.isPoweredOn)
+        XCTAssertEqual(port.isPoweredOn, false)
         XCTAssertNil(metrics.system)
     }
 

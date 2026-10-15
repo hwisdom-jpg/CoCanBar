@@ -20,6 +20,7 @@ let usage = """
   cocan-probe mcp <含 MCP 地址的文件> <PSN> --schema    （打印每个工具的说明和参数结构）
   cocan-probe mcp <含 MCP 地址的文件> <PSN> --identify  （识别各口接的设备，和 app 用同一套规则）
   cocan-probe mcp <含 MCP 地址的文件> <PSN> --history C1 （小电拼内存里这个口最近 30 分钟的读数）
+  cocan-probe mcp <含 MCP 地址的文件> <PSN> --cloud     （和 app 离网时一样读一次云端读数，可以和 lan 的输出对照）
 """
 
 func fail(_ message: String) -> Never {
@@ -29,6 +30,11 @@ func fail(_ message: String) -> Never {
 
 func fixed(_ value: Double, _ digits: Int) -> String {
     String(format: "%.\(digits)f", value)
+}
+
+/// 端口开关状态：云端读数里没在供电的口不知道开没开。
+func powerText(_ port: PortMetrics) -> String {
+    port.isPoweredOn.map { "\($0)" } ?? "未知"
 }
 
 var args = Array(CommandLine.arguments.dropFirst())
@@ -50,9 +56,9 @@ case "lan":
         print("合计 \(fixed(metrics.totalWatts, 2)) W，充电中 \(metrics.chargingCount) 个口，固件 \(metrics.system?.appVersion ?? "-")")
         for port in metrics.ports {
             let name = PortNaming.name(index: port.id, family: info.productFamily)
-            print("  \(name)\t开=\(port.isPoweredOn) 状态=\(port.state) 连接=\(port.attached) "
+            print("  \(name)\t开=\(powerText(port)) 状态=\(port.state) 连接=\(port.attached) "
                   + "\(fixed(port.volts, 2)) V \(fixed(port.amps, 3)) A \(fixed(port.watts, 2)) W "
-                  + "\(FastChargeProtocol.name(port.fcProtocol)) \(port.chargingDurationSeconds) s 预算 \(port.powerBudgetWatts) W")
+                  + "\(port.protocolName) \(port.chargingDurationSeconds) s 预算 \(port.powerBudgetWatts) W")
         }
     } catch {
         fail("读取失败：\(error.localizedDescription)")
@@ -117,6 +123,18 @@ case "mcp":
                              detail?.sessionEnergyMWh.map { "本次 \(SessionEnergy.format(mWh: Double($0)))" },
                              identity.sessionID.map { "会话 \($0)" }]
                 print("  \(PortNaming.name(index: id))\t" + parts.compactMap { $0 }.joined(separator: " · "))
+            }
+        } else if args[3] == "--cloud" {
+            // 和 app 连不上局域网时一样读一次云端（get_port_details，只读）。云端没有开关状态、充电时长和分配功率
+            let reading = try await client.cloudReading()
+            print("合计 \(fixed(reading.metrics.totalWatts, 2)) W，充电中 \(reading.metrics.chargingCount) 个口（云端读数）")
+            for port in reading.metrics.ports {
+                let detail = reading.details[port.id]
+                let parts = ["开=\(powerText(port)) 连接=\(port.attached)",
+                             "\(fixed(port.volts, 2)) V \(fixed(port.amps, 3)) A \(fixed(port.watts, 2)) W \(port.protocolName)",
+                             detail?.temperature.map { "芯片 \($0.label)" },
+                             detail?.sessionEnergyMWh.map { "本次 \(SessionEnergy.format(mWh: Double($0)))" }]
+                print("  \(PortNaming.name(index: port.id))\t" + parts.compactMap { $0 }.joined(separator: " · "))
             }
         } else if args[3] == "--history" {
             // 小电拼内存里一个口最近 30 分钟的读数（get_port_stats，只读）。端口按名字给，比如 C1

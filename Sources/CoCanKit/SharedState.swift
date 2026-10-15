@@ -67,7 +67,7 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
         public var name: String
         /// 写快照时 app 是否还能读到它。
         public var online: Bool
-        /// 最近一次读到局域网读数的时间。
+        /// 最近一次读到读数的时间（局域网或云端）。
         public var readAt: Date?
         /// 配好了 MCP，能开关端口。
         public var controllable: Bool
@@ -86,11 +86,13 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
         public var lanIP: String?
         /// 局域网 `session_charge` 每 mWh 的计数（app 用 MCP 读数校准过），小组件用它接着算本次电量。
         public var lanUnitsPerMWh: Double?
+        /// 读数来自云端 MCP（Mac 连不上设备的局域网）：没有开关状态，小组件上不能开关。
+        public var viaCloud: Bool?
 
         public init(psn: String, name: String, online: Bool, readAt: Date?, controllable: Bool, strategy: Int?,
                     ports: [Port], recentWatts: [Double?] = [], recentWattsAt: Date? = nil, busy: String? = nil,
                     message: String? = nil, messageIsError: Bool = false, host: String? = nil, lanIP: String? = nil,
-                    lanUnitsPerMWh: Double? = nil) {
+                    lanUnitsPerMWh: Double? = nil, viaCloud: Bool? = nil) {
             self.psn = psn
             self.name = name
             self.online = online
@@ -106,6 +108,7 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
             self.host = host
             self.lanIP = lanIP
             self.lanUnitsPerMWh = lanUnitsPerMWh
+            self.viaCloud = viaCloud
         }
 
         public var id: String { psn }
@@ -130,13 +133,14 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
                     energy = base + Double(count - before) / units
                 }
                 return Port(id: port.id, poweredOn: port.isPoweredOn, attached: port.attached, watts: port.watts,
-                            volts: port.volts, amps: port.amps, fcProtocol: port.fcProtocol,
+                            volts: port.volts, amps: port.amps, fcProtocol: port.fcProtocol, protocolText: port.protocolText,
                             deviceName: sameSession ? old?.deviceName : nil, sessionEnergyMWh: energy,
                             chargingSeconds: port.chargingDurationSeconds, sessionID: port.sessionID,
                             sessionCharge: port.sessionCharge)
             }
             device.online = true
             device.readAt = date
+            device.viaCloud = nil
             device.recentWatts = WidgetSnapshot.shiftedSeries(recentWatts, from: recentWattsAt ?? readAt ?? date,
                                                               to: date, latest: metrics.totalWatts)
             device.recentWattsAt = date
@@ -150,12 +154,15 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
     public struct Port: Codable, Sendable, Equatable, Identifiable {
         /// `PortMetrics.id`，从 0 开始。
         public var id: Int
-        public var poweredOn: Bool
+        /// 开着为 true、关着为 false；云端读数里不知道时为 nil（见 `PortMetrics.isPoweredOn`）。
+        public var poweredOn: Bool?
         public var attached: Bool
         public var watts: Double
         public var volts: Double
         public var amps: Double
         public var fcProtocol: Int
+        /// 云端读数里认不出编号的协议原文（见 `PortMetrics.protocolText`）。
+        public var protocolText: String?
         /// 认出的设备（品牌型号），认不出为 nil。
         public var deviceName: String?
         public var batteryPercent: Int?
@@ -167,10 +174,10 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
         public var sessionID: Int?
         public var sessionCharge: Int?
 
-        public init(id: Int, poweredOn: Bool, attached: Bool, watts: Double, volts: Double, amps: Double,
-                    fcProtocol: Int, deviceName: String? = nil, batteryPercent: Int? = nil, temperature: String? = nil,
-                    sessionEnergyMWh: Double? = nil, chargingSeconds: Int = 0, sessionID: Int? = nil,
-                    sessionCharge: Int? = nil) {
+        public init(id: Int, poweredOn: Bool?, attached: Bool, watts: Double, volts: Double, amps: Double,
+                    fcProtocol: Int, protocolText: String? = nil, deviceName: String? = nil, batteryPercent: Int? = nil,
+                    temperature: String? = nil, sessionEnergyMWh: Double? = nil, chargingSeconds: Int = 0,
+                    sessionID: Int? = nil, sessionCharge: Int? = nil) {
             self.id = id
             self.poweredOn = poweredOn
             self.attached = attached
@@ -178,6 +185,7 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
             self.volts = volts
             self.amps = amps
             self.fcProtocol = fcProtocol
+            self.protocolText = protocolText
             self.deviceName = deviceName
             self.batteryPercent = batteryPercent
             self.temperature = temperature
@@ -189,8 +197,8 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
 
         public var name: String { PortNaming.name(index: id) }
         public var isCharging: Bool { attached && amps > 0 }
-        /// 和 `PortMetrics.isInUse` 一样：开着并且插着设备，关掉之前要确认。
-        public var inUse: Bool { poweredOn && attached }
+        /// 和 `PortMetrics.isInUse` 一样：确定开着并且插着设备，关掉之前要确认。
+        public var inUse: Bool { poweredOn == true && attached }
         public var temperatureLevel: PortTemperature? { PortTemperature(temperature) }
     }
 
@@ -244,7 +252,8 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
         guard let old, old.devices.map(\.psn) == devices.map(\.psn) else { return .state }
         var result = Change.none
         for (new, before) in zip(devices, old.devices) {
-            if new.name != before.name || new.online != before.online || new.controllable != before.controllable
+            if new.name != before.name || new.online != before.online || new.viaCloud != before.viaCloud
+                || new.controllable != before.controllable
                 || new.strategy != before.strategy || new.busy != before.busy || new.message != before.message
                 || new.ports.map(\.id) != before.ports.map(\.id) {
                 return .state

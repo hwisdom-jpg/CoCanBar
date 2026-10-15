@@ -59,17 +59,37 @@ struct IdentityState: Equatable {
     var loadError: String?
 }
 
+/// 读数从哪来：局域网 `metrics.json`，或者局域网连不上时的云端 MCP（见 `CloudReading`）。
+enum ReadingSource: Equatable {
+    case lan, cloud
+}
+
+/// 本次运行里在本机成功发出的开关命令。云端读不到开关状态时，拿它给用户一个有依据的参考。
+struct PortCommand: Equatable {
+    var on: Bool
+    var at: Date
+}
+
 /// 一台设备的运行时状态（不持久化）。
 struct DeviceRuntime: Equatable {
     var metrics: DeviceMetrics?
+    /// 最近一次读到读数的时间，`source` 是它的来源。
     var lastSuccess: Date?
+    var source = ReadingSource.lan
     var lastError: String?
     var resolvedIP: String?
     var resolvedAt: Date?
     /// 最近一次用首页 PSN 核对过身份的 IP 和时间。
     var verifiedIP: String?
     var verifiedAt: Date?
+    /// 局域网连续失败的次数。
     var failures = 0
+    /// 上次试云端读数的时间、连续失败的次数和原因。局域网读到时清掉。
+    var cloudCheckedAt: Date?
+    var cloudFailures = 0
+    var cloudError: String?
+    /// 键是 `PortMetrics.id`。局域网读到时清掉（那时开关状态是读出来的）。
+    var portCommands: [Int: PortCommand] = [:]
     var control = ControlState()
     var identity = IdentityState()
     var busy: String?
@@ -139,6 +159,8 @@ final class AppModel {
     @ObservationIgnored private var currentMessage: [String: Int] = [:]
     /// 离屏截图用的假数据模型：不轮询、不碰钥匙串和网络。
     @ObservationIgnored private var isSnapshot = false
+    /// 启动参数 `--cloud-only`：不读局域网，只用云端读数（在家里也能试离网时的样子）。
+    @ObservationIgnored private var cloudOnly = false
     /// 还没满 10 秒的读数（满了才写进 `history`，免得曲线每次读数都重画）。
     @ObservationIgnored private var recorders: [String: [Int: HistoryRecorder]] = [:]
     /// 给桌面小组件写数据、收小组件的开关命令。没有 App Group（SwiftPM 调试构建）时为 nil。
@@ -214,33 +236,39 @@ final class AppModel {
         }
     }
 
-    func refreshAll() async {
+    /// `cloudNow`：局域网读不到时马上读一次云端，不等 15 秒的间隔（点了刷新、刚发完命令、快捷指令要读数）。
+    func refreshAll(cloudNow: Bool = false) async {
         guard !isSnapshot else { return }
         let psns = devices.map(\.psn)
         await withTaskGroup(of: Void.self) { group in
             for psn in psns {
-                group.addTask { await self.refresh(psn) }
+                group.addTask { await self.refresh(psn, cloudNow: cloudNow) }
             }
         }
     }
 
-    func refresh(_ psn: String) async {
+    func refresh(_ psn: String, cloudNow: Bool = false) async {
         // 每次都取最新配置，不用调用方手里的旧副本
         guard let device = device(psn) else { return }
         refreshCounter += 1
         let ticket = refreshCounter
         var state = runtime[psn] ?? DeviceRuntime()
-        var fetched = false
+        var lanFetched = false
         let host = device.effectiveHost
         // IP 可能被 DHCP 换给另一台小电拼，旧地址照样能连通，只靠失败重试发现不了。
         // 所以主机名每分钟重新解析一次，IP 变了或满一分钟就用首页里的 PSN 核对身份。
         let resolveDue = state.resolvedAt.map { Date().timeIntervalSince($0) > 60 } ?? true
-        if state.resolvedIP == nil || (resolveDue && !HostResolver.isIPv4Literal(host)) {
+        if cloudOnly {
+            state.failures += 1
+            state.lastError = "启动参数 --cloud-only：不读局域网"
+        } else if state.resolvedIP == nil || (resolveDue && !HostResolver.isIPv4Literal(host)) {
             if let ip = await HostResolver.resolveIPv4(host) { state.resolvedIP = ip }
             // 解析失败也记下时间，避免每轮都等满超时
             state.resolvedAt = Date()
         }
-        if let ip = state.resolvedIP {
+        if cloudOnly {
+            // 上面已经记成局域网失败
+        } else if let ip = state.resolvedIP {
             do {
                 let verifyDue = state.verifiedIP != ip || (state.verifiedAt.map { Date().timeIntervalSince($0) > 60 } ?? true)
                 if verifyDue {
@@ -254,10 +282,14 @@ final class AppModel {
                     state.verifiedAt = Date()
                 }
                 state.metrics = try await lan.metrics(ip: ip)
-                fetched = true
+                lanFetched = true
                 state.lastSuccess = Date()
+                state.source = .lan
                 state.lastError = nil
                 state.failures = 0
+                state.cloudCheckedAt = nil
+                state.cloudFailures = 0
+                state.cloudError = nil
             } catch LANError.wrongDevice(let found) {
                 // 不显示别的设备的读数；下一轮立即重新解析
                 state.metrics = nil
@@ -276,6 +308,37 @@ final class AppModel {
             state.failures += 1
             state.lastError = LANError.unresolved(host).localizedDescription
         }
+        // 局域网连续两次读不到（Mac 不在同一个网络、或者设备换了地址）：配好 MCP 的话改读云端，每 15 秒一次
+        var cloudDetails: [Int: PortDetail]?
+        if !lanFetched, !isSnapshot, mcpConfigured.contains(psn), cloudOnly || cloudNow || state.failures >= 2 {
+            let due = state.cloudCheckedAt.map {
+                Date().timeIntervalSince($0) >= CloudReading.interval(afterFailures: state.cloudFailures)
+            } ?? true
+            if cloudNow || due {
+                state.cloudCheckedAt = Date()
+                do {
+                    let reading = try await client(for: psn).cloudReading()
+                    if state.source != .cloud || state.cloudError != nil {
+                        appLog.notice("局域网读不到，改用云端读数：\(reading.metrics.ports.count, privacy: .public) 个口")
+                    }
+                    state.metrics = reading.metrics
+                    state.lastSuccess = Date()
+                    state.source = .cloud
+                    state.cloudFailures = 0
+                    state.cloudError = nil
+                    cloudDetails = reading.details
+                } catch {
+                    if case MCPError.unauthorized = error { clients[psn] = nil }
+                    if state.cloudError == nil {
+                        appLog.notice("局域网和云端都读不到：\(error.localizedDescription, privacy: .public)")
+                    }
+                    state.cloudFailures += 1
+                    state.cloudError = error.localizedDescription
+                }
+            }
+        }
+        let fetched = lanFetched || cloudDetails != nil
+        if lanFetched, runtime[psn]?.source == .cloud { appLog.notice("回到局域网读数") }
         // 等待期间可能删了设备、改了主机，或者更晚发出的读取已经先写回：这些情况下丢弃本次结果
         guard self.device(psn) != nil, ticket > appliedRefresh[psn, default: 0] else { return }
         appliedRefresh[psn] = ticket
@@ -289,14 +352,28 @@ final class AppModel {
             $0.verifiedIP = state.verifiedIP
             $0.verifiedAt = state.verifiedAt
             $0.failures = state.failures
+            $0.source = state.source
+            $0.cloudCheckedAt = state.cloudCheckedAt
+            $0.cloudFailures = state.cloudFailures
+            $0.cloudError = state.cloudError
+            // 回到局域网时开关状态又是读出来的了，不再需要本机命令作参考
+            if lanFetched { $0.portCommands = [:] }
+            // 云端读数里本来就有芯片温度和本次电量（服务端换算好的 mWh），直接替换
+            if let cloudDetails { $0.identity.details = cloudDetails }
         }
         if fetched, let metrics = state.metrics { recordHistory(psn, metrics, at: Date()) }
         updateSummary()
     }
 
     func isOnline(_ psn: String) -> Bool {
-        guard let last = runtime[psn]?.lastSuccess else { return false }
-        return Date().timeIntervalSince(last) < max(pollInterval * 3, 10)
+        guard let state = runtime[psn], let last = state.lastSuccess else { return false }
+        let window = state.source == .cloud ? CloudReading.freshness : max(pollInterval * 3, 10)
+        return Date().timeIntervalSince(last) < window
+    }
+
+    /// 在线，并且读数来自云端（Mac 连不上设备的局域网）。
+    func isCloud(_ psn: String) -> Bool {
+        runtime[psn]?.source == .cloud && isOnline(psn)
     }
 
     private func updateSummary() {
@@ -327,7 +404,8 @@ final class AppModel {
                               success: on ? "已打开 \(name)" : "已关闭 \(name)") {
             try await $0.setPorts([index + 1], on: on)
         }
-        await refresh(psn)
+        if error == nil { mutate(psn) { $0.portCommands[index] = PortCommand(on: on, at: Date()) } }
+        await refresh(psn, cloudNow: true)
         return error
     }
 
@@ -880,7 +958,7 @@ final class AppModel {
     // MARK: - 启动参数
 
     /// `--import <文件>`：从文件里提取 MCP 地址存进钥匙串（按 PSN 建设备）；
-    /// `--rename <PSN>=<名称>`：设置设备名称。日志里不输出地址。
+    /// `--rename <PSN>=<名称>`：设置设备名称；`--cloud-only`：不读局域网，只用云端读数。日志里不输出地址。
     private func handleLaunchArguments() {
         let arguments = CommandLine.arguments
         var index = 1
@@ -901,6 +979,10 @@ final class AppModel {
                 let parts = pair.split(separator: "=", maxSplits: 1).map(String.init)
                 if parts.count == 2 { rename(parts[0], to: parts[1]) }
                 index += 2
+            case ("--cloud-only", _):
+                cloudOnly = true
+                appLog.notice("启动参数 --cloud-only：不读局域网，只用云端读数")
+                index += 1
             default:
                 index += 1
             }

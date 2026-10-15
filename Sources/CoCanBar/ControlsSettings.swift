@@ -43,6 +43,7 @@ struct DeviceControls: View {
     private var control: ControlState { state.control }
     private var configured: Bool { model.mcpConfigured.contains(device.psn) }
     private var online: Bool { model.isOnline(device.psn) }
+    private var cloud: Bool { model.isCloud(device.psn) }
     private var canSend: Bool { configured && state.busy == nil }
     private var ports: [PortMetrics] { (state.metrics?.ports ?? []).sorted { $0.id < $1.id } }
     private var facts: MachineFacts { model.facts(device.psn) }
@@ -57,7 +58,7 @@ struct DeviceControls: View {
                 if !configured {
                     notice
                 }
-                group("实时调度", detail: "端口开关") { portsTable }
+                group("实时调度", detail: cloud ? "云端读数" : "端口开关") { portsTable }
                 group("在充设备", detail: identityStatus) {
                     ConnectedDevices(device: device, ports: ports, configured: configured, online: online)
                 }
@@ -189,6 +190,15 @@ struct DeviceControls: View {
                         .gridCellUnsizedAxes(.horizontal)
                 }
             }
+            if cloud {
+                Text("Mac 连不上小电拼的局域网，读数来自云端 MCP，每 15 秒更新。云端读不到开关状态、充电时长和分配功率；"
+                     + "没在供电的口开没开不知道，用「打开」「关闭」按钮操作。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .gridCellUnsizedAxes(.horizontal)
+                    .padding(.top, 8)
+            }
         }
     }
 
@@ -205,7 +215,7 @@ struct DeviceControls: View {
                     .foregroundStyle(Palette.ink)
             }
             .frame(minWidth: 62, alignment: .leading)
-            Text(port.isCharging ? FastChargeProtocol.name(port.fcProtocol) : (port.isPoweredOn ? (port.attached ? "已连接" : "–") : "已关闭"))
+            Text(port.isCharging ? port.protocolName : stateText(port))
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(live ? String(format: "%.2fV", port.volts) : "–")
@@ -225,15 +235,28 @@ struct DeviceControls: View {
                 }
             }
             .frame(minWidth: 40, alignment: .leading)
-            PortSwitch(isOn: switching[port.id] ?? port.isPoweredOn, enabled: canSend && online, name: name, size: 1.2) {
-                toggle(port, on: !(switching[port.id] ?? port.isPoweredOn))
+            if let on = port.isPoweredOn {
+                PortSwitch(isOn: switching[port.id] ?? on, enabled: canSend && online, name: name, size: 1.2) {
+                    toggle(port, on: !(switching[port.id] ?? on))
+                }
+                .help(on ? "关闭 \(name)" : "打开 \(name)")
+            } else {
+                PowerButtons(enabled: canSend && online && switching[port.id] == nil, name: name) { setPort(port, on: $0) }
             }
-            .help(port.isPoweredOn ? "关闭 \(name)" : "打开 \(name)")
         }
         .font(.system(size: 12))
         .monospacedDigit()
         .foregroundStyle(.secondary)
         .padding(.vertical, 9)
+    }
+
+    /// 不在充时「协议」一栏写的状态。云端读不到开关状态时只说看得到的。
+    private func stateText(_ port: PortMetrics) -> String {
+        switch port.isPoweredOn {
+        case true?: return port.attached ? "已连接" : "–"
+        case false?: return "已关闭"
+        case nil: return port.attached ? "已连接，没有供电" : "开关状态未知"
+        }
     }
 
     private func toggle(_ port: PortMetrics, on: Bool) {
@@ -501,7 +524,8 @@ struct DeviceControls: View {
         guard online else { return state.lastError == nil ? "正在连接 \(device.effectiveHost)…" : "离线" }
         let total = PanelFormat.watts(state.metrics?.totalWatts ?? 0)
         let charging = state.metrics?.chargingCount ?? 0
-        return charging > 0 ? "\(device.name) · \(charging) 口在充 · \(total) W" : "\(device.name) · 没有在充"
+        let text = charging > 0 ? "\(device.name) · \(charging) 口在充 · \(total) W" : "\(device.name) · 没有在充"
+        return cloud ? text + " · 云端读数" : text
     }
 }
 
@@ -646,7 +670,7 @@ private struct ConnectedDevices: View {
     let configured: Bool
     let online: Bool
 
-    private var attached: [PortMetrics] { ports.filter { $0.attached && $0.isPoweredOn } }
+    private var attached: [PortMetrics] { ports.filter { $0.attached && $0.isPoweredOn == true } }
     private var identity: IdentityState { model.runtime[device.psn]?.identity ?? IdentityState() }
     /// 插拔后、重新读到之前，没有结果的口显示“正在识别”而不是“未识别”。
     private var pending: Bool { identity.loading || identity.signature != PortIdentity.signature(of: ports) }
@@ -741,8 +765,8 @@ private struct ConnectedDevices: View {
 
     private func identityLines(_ port: PortMetrics, _ info: PortIdentity?) -> [String] {
         guard let info else {
-            return port.isCharging && !(15...21).contains(port.fcProtocol)
-                ? ["协议：\(FastChargeProtocol.name(port.fcProtocol))，不走 PD，认不出型号"] : []
+            return port.isCharging && !port.usesPD
+                ? ["协议：\(port.protocolName)，不走 PD，认不出型号"] : []
         }
         var lines: [String] = []
         if let id = info.idText {
@@ -752,7 +776,7 @@ private struct ConnectedDevices: View {
         } else if info.usesPD {
             lines.append("设备没在 PD 握手里报厂商号和产品号，认不出型号")
         } else if port.isCharging {
-            lines.append("协议：\(FastChargeProtocol.name(port.fcProtocol))，不走 PD，认不出型号")
+            lines.append("协议：\(port.protocolName)，不走 PD，认不出型号")
         } else {
             lines.append("没有在取电，暂时认不出")
         }

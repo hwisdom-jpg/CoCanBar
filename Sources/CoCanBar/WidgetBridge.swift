@@ -122,11 +122,11 @@ final class WidgetBridge {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    /// 小组件上点了刷新：马上读一次局域网，写出新快照并刷新小组件。连点时只读一次。
+    /// 小组件上点了刷新：马上读一次（局域网读不到的设备改读云端），写出新快照并刷新小组件。连点时只读一次。
     private func refreshNow() async {
         guard let model, !refreshing else { return }
         refreshing = true
-        await model.refreshAll()
+        await model.refreshAll(cloudNow: true)
         refreshing = false
         update(force: true)
     }
@@ -186,13 +186,15 @@ final class WidgetBridge {
         }
     }
 
-    /// 命令没过期、设备是 app 里添加过的、配好了 MCP、口存在、设备没有别的操作在进行。
+    /// 命令没过期、设备是 app 里添加过的、配好了 MCP、读数来自局域网、口存在、设备没有别的操作在进行。
     private func check(_ command: WidgetCommand, now: Date) -> String? {
         guard let model else { return "菜单栏 app 正在退出" }
         if command.isExpired(now: now) { return "命令已过期，没有执行" }
         guard let device = model.device(command.psn) else { return "菜单栏 app 里没有这台设备" }
         guard model.mcpConfigured.contains(device.psn) else { return "「\(device.name)」还没配好 MCP，不能开关端口" }
         guard model.isOnline(device.psn) else { return "「\(device.name)」不在线" }
+        // 云端读数没有开关状态，小组件上的开关是按旧状态画的，点下去未必是想要的方向
+        if model.isCloud(device.psn) { return "Mac 连不上「\(device.name)」的局域网，请在菜单栏面板里开关" }
         guard model.runtime[device.psn]?.metrics?.ports.contains(where: { $0.id == command.port }) == true else {
             return "读不到这个口"
         }
@@ -211,7 +213,8 @@ extension AppModel {
                 let identity = identity(device.psn, port: port)
                 return WidgetSnapshot.Port(id: port.id, poweredOn: port.isPoweredOn, attached: port.attached,
                                            watts: port.watts, volts: port.volts, amps: port.amps,
-                                           fcProtocol: port.fcProtocol, deviceName: identity?.displayName,
+                                           fcProtocol: port.fcProtocol, protocolText: port.protocolText,
+                                           deviceName: identity?.displayName,
                                            batteryPercent: identity?.battery?.percent,
                                            temperature: temperature(device.psn, port: port)?.rawValue,
                                            sessionEnergyMWh: sessionEnergy(device.psn, port: port),
@@ -226,7 +229,8 @@ extension AppModel {
                                          busy: state?.busy, message: state?.message,
                                          messageIsError: state?.messageIsError ?? false,
                                          host: device.effectiveHost, lanIP: state?.verifiedIP ?? state?.resolvedIP,
-                                         lanUnitsPerMWh: state?.identity.lanUnitsPerMWh)
+                                         lanUnitsPerMWh: state?.identity.lanUnitsPerMWh,
+                                         viaCloud: isCloud(device.psn) ? true : nil)
         })
     }
 }

@@ -55,9 +55,10 @@ struct ChargerEntry: TimelineEntry {
     }
 
     /// 能不能在小组件上开关：菜单栏 app 在运行（命令要它发）、配好了 MCP、在线、读数没过时、没有操作在进行。
+    /// 读数来自云端时不行：云端读不到开关状态，关掉的口在小组件上就开不回来了。
     var canSwitch: Bool {
         guard appRunning, let device else { return false }
-        return device.controllable && device.online && !isStale && device.busy == nil
+        return device.controllable && device.online && device.viaCloud != true && !isStale && device.busy == nil
     }
 
     /// 等第二次点击确认关闭的口。

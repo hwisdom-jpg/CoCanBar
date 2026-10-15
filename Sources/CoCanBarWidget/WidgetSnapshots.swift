@@ -40,6 +40,12 @@ enum WidgetSnapshots {
         directFailed.directFailed = true
         var appQuit = base
         appQuit.appRunning = false
+        // Mac 不在家，菜单栏 app 改读云端：没在供电的口开关状态未知，开关不能点
+        var cloud = WidgetSnapshot.demo(now: now)
+        cloud.devices[0].viaCloud = true
+        for index in cloud.devices[0].ports.indices where cloud.devices[0].ports[index].volts < 3 {
+            cloud.devices[0].ports[index].poweredOn = nil
+        }
 
         let cases: [(name: String, entry: ChargerEntry, families: [WidgetFamily])] = [
             ("正常", base, all),
@@ -53,6 +59,7 @@ enum WidgetSnapshots {
             ("app没开-小组件直读", .directPreview(date: now), all),
             ("app没开-直读失败", directFailed, [.systemLarge]),
             ("app刚退出", appQuit, [.systemLarge]),
+            ("云端读数", ChargerEntry(date: now, snapshot: cloud, psn: nil), all),
             ("没有数据", ChargerEntry(date: now, snapshot: nil, psn: nil), all),
             ("没有设备", ChargerEntry(date: now, snapshot: WidgetSnapshot(updatedAt: now, devices: []), psn: nil),
              [.systemSmall]),

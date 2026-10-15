@@ -169,7 +169,7 @@ struct DeviceName: View {
 }
 
 /// 读数时间（24 小时制，和中文界面一致）。读数过时了换成「停在 14:05」，离线时写离线；
-/// 中、大尺寸在小组件自己读局域网时加上「直读」。
+/// 中、大尺寸在小组件自己读局域网时加上「直读」，读数来自云端时加上「云端」。
 struct ReadingTime: View {
     let entry: ChargerEntry
     let device: WidgetSnapshot.Device
@@ -189,6 +189,8 @@ struct ReadingTime: View {
                     Text("停在 \(time)").foregroundStyle(Palette.brand)
                 } else if !device.online, showsOffline {
                     Text("离线 · \(time)").foregroundStyle(Palette.heading)
+                } else if device.viaCloud == true, showsSource {
+                    Text("\(time) · 云端").foregroundStyle(Palette.unit)
                 } else if entry.isDirect, showsSource {
                     Text("\(time) · 直读").foregroundStyle(Palette.unit)
                 } else {
@@ -294,7 +296,7 @@ struct PortBar: View {
         switch PortState(port: port) {
         case .off:
             Capsule().fill(Palette.track).overlay(Hatch(spacing: 3).stroke(Palette.hatch, lineWidth: 1).clipShape(Capsule()))
-        case .idle, .attached:
+        case .idle, .attached, .unknown:
             Capsule().fill(Palette.track)
         case .charging:
             Capsule().fill(color)
@@ -330,9 +332,15 @@ struct PortBadge: View {
 
 enum PortState: Equatable {
     case off, idle, attached, charging
+    /// 云端读数里没在供电的口：开着空着和关着分不出来，不猜。
+    case unknown
 
     init(port: WidgetSnapshot.Port) {
-        if !port.poweredOn {
+        guard let on = port.poweredOn else {
+            self = .unknown
+            return
+        }
+        if !on {
             self = .off
         } else if port.isCharging {
             self = .charging
@@ -349,7 +357,13 @@ enum PortState: Equatable {
         case .idle: return "空闲"
         case .attached: return "插着设备"
         case .charging: return "在充电"
+        case .unknown: return "开关状态未知"
         }
+    }
+
+    /// 开关状态未知时只说看得到的：接着设备但没有输出电压，或者没接设备。
+    static func unknownTitle(_ port: WidgetSnapshot.Port) -> String {
+        port.attached ? "已连接，没有供电" : "没接设备"
     }
 }
 
@@ -381,6 +395,7 @@ struct CompactPortRow: View {
         case .off: return "已关闭"
         case .idle: return "空闲"
         case .attached, .charging: return port.deviceName ?? (port.isCharging ? "正在充电" : "插着设备")
+        case .unknown: return PortState.unknownTitle(port)
         }
     }
 }
@@ -483,6 +498,7 @@ struct LargePortRow: View {
         case .idle: return "空闲"
         case .attached: return port.deviceName ?? "插着设备，没有在充"
         case .charging: return port.deviceName ?? "正在充电"
+        case .unknown: return PortState.unknownTitle(port)
         }
     }
 
@@ -493,7 +509,7 @@ struct LargePortRow: View {
         var parts: [String] = []
         if port.isCharging {
             parts.append(PanelFormat.volts(port.volts))
-            let name = PanelFormat.shortProtocol(port.fcProtocol)
+            let name = port.shortProtocol
             if !name.isEmpty { parts.append(name) }
         }
         if let energy = port.sessionEnergyMWh { parts.append("本次 \(SessionEnergy.format(mWh: energy))") }
@@ -508,22 +524,31 @@ struct PortSwitchButton: View {
     let entry: ChargerEntry
 
     var body: some View {
-        let pending = entry.pendingPort == port.id
-        Button(intent: WidgetPortSwitchIntent(psn: device.psn, port: port.id, turnOn: !port.poweredOn, inUse: port.inUse)) {
-            if pending {
-                Text("关闭？")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 42, height: 17)
-                    .background(Capsule().fill(Palette.danger))
-            } else {
-                SwitchCapsule(isOn: port.poweredOn, size: 0.95)
+        if let on = port.poweredOn {
+            let pending = entry.pendingPort == port.id
+            Button(intent: WidgetPortSwitchIntent(psn: device.psn, port: port.id, turnOn: !on, inUse: port.inUse)) {
+                if pending {
+                    Text("关闭？")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 42, height: 17)
+                        .background(Capsule().fill(Palette.danger))
+                } else {
+                    SwitchCapsule(isOn: on, size: 0.95)
+                }
             }
+            .buttonStyle(.plain)
+            .disabled(!entry.canSwitch)
+            .opacity(entry.canSwitch ? 1 : 0.4)
+            .accessibilityLabel(on ? "关闭 \(port.name)" : "打开 \(port.name)")
+        } else {
+            // 云端读不到开关状态：不画开或关，开关请在菜单栏面板里操作
+            Text("–")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Palette.unit)
+                .frame(width: 42, height: 17)
+                .accessibilityLabel("\(port.name) 开关状态未知")
         }
-        .buttonStyle(.plain)
-        .disabled(!entry.canSwitch)
-        .opacity(entry.canSwitch ? 1 : 0.4)
-        .accessibilityLabel(port.poweredOn ? "关闭 \(port.name)" : "打开 \(port.name)")
     }
 }
 
@@ -563,7 +588,11 @@ struct LargeFooter: View {
         }
         if !device.controllable { return (.hint, "在「小电拼」里配好 MCP 后，这里可以开关端口") }
         if entry.isStale { return (.hint, "读数超过 15 分钟没更新，点右上角刷新") }
-        if !device.online { return (.hint, "Mac 和小电拼不在同一个网络时读不到实时数据") }
+        if !device.online {
+            // 配好 MCP 的设备连不上局域网时会改读云端，这时还离线就是两边都读不到
+            return (.hint, device.controllable ? "局域网和云端都读不到这台设备" : "Mac 和小电拼不在同一个网络时读不到实时数据")
+        }
+        if device.viaCloud == true { return (.hint, "读数来自云端（不在同一网络），开关请用菜单栏面板") }
         let energy = device.ports.compactMap(\.sessionEnergyMWh).reduce(0, +)
         return (.hint, energy > 0 ? "各口本次共充 \(SessionEnergy.format(mWh: energy))" : "")
     }

@@ -22,11 +22,15 @@ public struct PortMetrics: Sendable, Equatable, Identifiable {
     public let sessionID: Int?
     /// 本次会话的电量计数，一直在涨；单位不是 mWh，见 `SessionEnergy`。
     public let sessionCharge: Int?
+    /// 开关状态有没有依据。局域网读数总是有；云端读数（`CloudReading`）只有确实在供电的口才有。
+    public let powerKnown: Bool
+    /// 云端读数里认不出编号的协议原文，显示时用它（`protocolName`）；局域网读数为 nil。
+    public let protocolText: String?
 
     public init(id: Int, active: Bool, state: String, portType: String, attached: Bool,
                 chargingDurationSeconds: Int, fcProtocol: Int, currentMilliamps: Int,
                 voltageMillivolts: Int, inputMillivolts: Int, powerBudgetWatts: Int, sessionID: Int? = nil,
-                sessionCharge: Int? = nil) {
+                sessionCharge: Int? = nil, powerKnown: Bool = true, protocolText: String? = nil) {
         self.id = id
         self.active = active
         self.state = state
@@ -40,6 +44,8 @@ public struct PortMetrics: Sendable, Equatable, Identifiable {
         self.powerBudgetWatts = powerBudgetWatts
         self.sessionID = sessionID
         self.sessionCharge = sessionCharge
+        self.powerKnown = powerKnown
+        self.protocolText = protocolText
     }
 
     public var watts: Double { Double(currentMilliamps) * Double(voltageMillivolts) / 1_000_000 }
@@ -47,9 +53,14 @@ public struct PortMetrics: Sendable, Equatable, Identifiable {
     public var amps: Double { Double(currentMilliamps) / 1000 }
     public var isCharging: Bool { attached && currentMilliamps > 0 }
     /// 端口是否开着。固件的端口状态有 ACTIVE / INACTIVE / ATTACHED / OPENING 等，INACTIVE 视为关闭。
-    public var isPoweredOn: Bool { active && state.uppercased() != "INACTIVE" }
-    /// 开着并且插着设备：关掉会让设备断电，界面上先确认。
-    public var isInUse: Bool { isPoweredOn && attached }
+    /// 不知道时为 nil：云端读数里没在供电的口，开着空着和关着分不出来。
+    public var isPoweredOn: Bool? { powerKnown ? active && state.uppercased() != "INACTIVE" : nil }
+    /// 确定开着并且插着设备：关掉会让设备断电，界面上先确认。
+    public var isInUse: Bool { isPoweredOn == true && attached }
+    /// 协议名：认得出编号用和小程序一样的名字，认不出用云端给的原文。
+    public var protocolName: String { protocolText ?? FastChargeProtocol.name(fcProtocol) }
+    /// 走 USB PD：编号 15–21，或者云端原文以 PD 开头。
+    public var usesPD: Bool { protocolText.map { $0.uppercased().hasPrefix("PD") } ?? (15...21).contains(fcProtocol) }
 }
 
 extension PortMetrics: Decodable {
@@ -80,6 +91,8 @@ extension PortMetrics: Decodable {
         powerBudgetWatts = try c.decodeIfPresent(Int.self, forKey: .powerBudget) ?? 0
         sessionID = try c.decodeIfPresent(Int.self, forKey: .sessionID)
         sessionCharge = try c.decodeIfPresent(Int.self, forKey: .sessionCharge)
+        powerKnown = true
+        protocolText = nil
     }
 }
 
@@ -182,9 +195,13 @@ public enum PortNaming {
 }
 
 public enum FastChargeProtocol {
+    /// 云端读数里认不出的协议，名字看 `PortMetrics.protocolText`。局域网读数不会有负数编号。
+    public static let unrecognized = -1
+
     /// fc_protocol 编号（来自小程序 FAST_CHARGE_PROTOCOL 枚举）。
     public static func name(_ code: Int) -> String {
         switch code {
+        case unrecognized: return "其他协议"
         case 0: return "USB 普通"
         case 1: return "QC 2.0"
         case 2: return "QC 3.0"
@@ -211,4 +228,26 @@ public enum FastChargeProtocol {
         default: return "协议 \(code)"
         }
     }
+
+    /// 云端 `get_port_details` 的 `fc_protocol` 是英文名，换成局域网读数的编号；认不出返回 nil。
+    /// 2026-10-16 实测见过 "Not Charging"、"USB Legacy Charging"、"PD Fixed 5V" 三种。其余的按和小程序枚举
+    /// 同名来认（去掉空格和标点比较），别的 "PD Fixed …" 档算 PD 固定高压。
+    public static func code(cloudName text: String) -> Int? {
+        let key = text.uppercased().filter { $0.isLetter || $0.isNumber || $0 == "+" }
+        switch key {
+        case "NOTCHARGING": return 255
+        case "USBLEGACYCHARGING": return 0
+        case "PDFIXED5V": return 15
+        default: break
+        }
+        if key.hasPrefix("PDFIXED") { return 16 }
+        return sameNamed[key]
+    }
+
+    /// 小程序里本来就是英文名的编号。
+    private static let sameNamed: [String: Int] = [
+        "QC20": 1, "QC30": 2, "QC3+": 3, "SFCP": 4, "AFC": 5, "FCP": 6, "SCP": 7, "VOOC10": 8, "VOOC40": 9,
+        "SUPERVOOC20": 10, "TFCP": 11, "UFCS": 12, "PE10": 13, "PE20": 14, "PDSPRAVS": 17, "PDPPS": 18,
+        "PDEPR": 19, "PDAVS": 20,
+    ]
 }
