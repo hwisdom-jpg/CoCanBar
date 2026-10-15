@@ -82,19 +82,26 @@ enum PanelSnapshots {
 
     /// `--demo-settings [devices|general]`：再开一个普通窗口显示设置页。默认是「调节」页，
     /// 窗口加高到不用滚动，检查整页表单排版；`devices`、`general` 换成另外两页，大小和真实窗口一样。
+    /// `--demo-settings-device <名称>`：「调节」页看哪台设备（默认第一台），用来核对离线、云端这些状态。
     static func showDemoSettingsIfRequested(model: AppModel) {
         let arguments = CommandLine.arguments
         guard let index = arguments.firstIndex(of: "--demo-settings") else { return }
         let page = index + 1 < arguments.count ? arguments[index + 1] : ""
+        if let at = arguments.firstIndex(of: "--demo-settings-device"), at + 1 < arguments.count,
+           let device = model.devices.first(where: { $0.name == arguments[at + 1] }) {
+            model.settingsDevice = device.psn
+        }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.5))
             let content: AnyView
             switch page {
-            case "devices": content = AnyView(DevicesSettings().frame(width: 540, height: 600))
-            case "general": content = AnyView(GeneralSettings().frame(width: 540, height: 600))
-            default: content = AnyView(ControlsSettings().frame(width: 540, height: 1400))
+            case "devices": content = AnyView(DevicesSettings().frame(width: 1080, height: 720))
+            case "general": content = AnyView(GeneralSettings().frame(width: 1080, height: 720))
+            default: content = AnyView(ControlsSettings().frame(width: 1080, height: 1500))
             }
-            let host = NSHostingView(rootView: content.environment(model))
+            // 垫上窗口底色再画：控件的半透明部分直接和底色混合，截出来的图和窗口里一样
+            let host = NSHostingView(rootView: content.background(Color(nsColor: .windowBackgroundColor))
+                .environment(model))
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: host.fittingSize),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = "小电拼设置（\(dataLabel)）"
@@ -136,7 +143,9 @@ enum PanelSnapshots {
             NSColor.windowBackgroundColor.setFill()
             NSRect(origin: .zero, size: view.bounds.size).fill()
         }
-        rep.draw(in: NSRect(origin: .zero, size: view.bounds.size))
+        // `draw(in:)` 连透明度一起直接覆盖，会把底色冲掉，所以叠在上面画
+        rep.draw(in: NSRect(origin: .zero, size: view.bounds.size), from: .zero, operation: .sourceOver,
+                 fraction: 1, respectFlipped: true, hints: nil)
         image.unlockFocus()
         guard let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
         return bitmap.representation(using: .png, properties: [:])
@@ -330,6 +339,13 @@ enum PanelSnapshots {
         loaded.temperature = .powerFirst
         loaded.display = .medium
         loaded.loadedAt = Date()
+        // `--demo-cp02s`：当作 CP02S，多出屏显模式、待机显示和整点报时，核对状态屏卡片的排版
+        if CommandLine.arguments.contains("--demo-cp02s") {
+            loaded.statusMode = .power
+            loaded.idleDisplay = .clock
+            loaded.hourlyChime = true
+            loaded.supportsExtendedDisplay = true
+        }
 
         var offline = DeviceRuntime()
         offline.metrics = DeviceMetrics(ports: sofaPorts, system: nil)

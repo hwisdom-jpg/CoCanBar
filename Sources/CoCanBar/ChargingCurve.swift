@@ -3,7 +3,8 @@ import Charts
 import CoCanKit
 import CoCanStyle
 
-/// 「调节」页的充电曲线：一个口或各口合计的功率，最近 30 分钟或 2 小时。样式照小程序端口详情页的「历史充电曲线」。
+/// 「调节」页的充电曲线：一个口或各口合计的功率，最近 30 分钟或 2 小时。内容照小程序端口详情页的「历史充电曲线」，
+/// 配色和设置窗口其他部分一样照 KangCharge（橙色曲线、浅灰网格）。
 ///
 /// 最近 30 分钟可以从小电拼内存补上（MCP `get_port_stats`），其余是本 app 运行时用局域网读数记的（见 `PortHistory`）。
 /// 鼠标停在曲线上显示那个时刻的读数。
@@ -40,21 +41,22 @@ struct ChargingCurve: View {
         let samples = model.historySamples(psn: device.psn, port: selection, since: start, now: now)
         VStack(alignment: .leading, spacing: 10) {
             controls
+            // 和旁边的「在充设备」对齐时，多出来的高度给图表
             chart(samples, start: start, now: now)
-                .frame(height: 190)
+                .frame(minHeight: 190, idealHeight: 190, maxHeight: .infinity)
             if samples.count >= 2 {
                 summary(samples)
             }
             if let error = model.historyError[device.psn] {
                 Label("读小电拼内存失败：\(error)。先显示本 app 记的。", systemImage: "exclamationmark.triangle.fill")
                     .font(.system(size: 11))
-                    .foregroundStyle(Palette.danger)
+                    .foregroundStyle(SettingsStyle.red)
             }
             Text(configured
                  ? "最近 30 分钟从小电拼内存读取（每 10 秒一个点，小电拼断电后清空）；其余是本 app 运行时用局域网读数记的，最多 2 小时，重开 app 后接着显示。"
                  : "没有保存 MCP 地址时，只有本 app 运行时用局域网读数记的，最多 2 小时，重开 app 后接着显示。")
-                .font(.system(size: 10.5))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11))
+                .foregroundStyle(SettingsStyle.gray)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .onAppear(perform: chooseDefault)
@@ -70,16 +72,9 @@ struct ChargingCurve: View {
     // MARK: 选择端口和时间范围
 
     private var controls: some View {
-        HStack(spacing: 10) {
-            Picker("端口", selection: $selection) {
-                Text("合计").tag(Int?.none)
-                ForEach(ports) { port in
-                    Text(PortNaming.name(index: port.id)).tag(Int?.some(port.id))
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
+        let portOptions: [(value: Int?, title: String)] = [(nil, "合计")] + ports.map { ($0.id, PortNaming.name(index: $0.id)) }
+        return HStack(spacing: 10) {
+            PillSegments(options: portOptions, selection: selection) { selection = $0 }
             Spacer(minLength: 8)
             if loading {
                 ProgressView()
@@ -89,19 +84,14 @@ struct ChargingCurve: View {
                     Task { await load(force: true) }
                 } label: {
                     Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(SettingsStyle.orange)
                 }
                 .buttonStyle(.borderless)
                 .help("重新读小电拼内存里最近 30 分钟的记录")
                 .disabled(!online)
             }
-            Picker("时间范围", selection: $span) {
-                ForEach(Span.allCases, id: \.self) { span in
-                    Text(span.title).tag(span)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
+            PillSegments(options: Span.allCases.map { (value: $0, title: $0.title) }, selection: span) { span = $0 }
         }
     }
 
@@ -132,7 +122,7 @@ struct ChargingCurve: View {
         } else {
             let segments = PortHistory.segments(samples)
             let axis = Self.axis(peak: samples.map(\.watts).max() ?? 0)
-            let fill = LinearGradient(colors: [Palette.brand.opacity(0.22), Palette.brand.opacity(0.02)],
+            let fill = LinearGradient(colors: [SettingsStyle.orange.opacity(0.22), SettingsStyle.orange.opacity(0.01)],
                                       startPoint: .top, endPoint: .bottom)
             Chart {
                 ForEach(Array(samples.enumerated()), id: \.offset) { index, sample in
@@ -143,19 +133,19 @@ struct ChargingCurve: View {
                     LineMark(x: .value("时间", sample.time), y: .value("功率", sample.watts),
                              series: .value("段", segments[index]))
                         .interpolationMethod(.monotone)
-                        .foregroundStyle(Palette.brand)
-                        .lineStyle(StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
+                        .foregroundStyle(SettingsStyle.orange)
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                 }
                 if let point = Self.nearest(samples, to: hovered) {
                     RuleMark(x: .value("时间", point.time))
-                        .foregroundStyle(Palette.brand.opacity(0.45))
+                        .foregroundStyle(SettingsStyle.orange.opacity(0.45))
                         .lineStyle(StrokeStyle(lineWidth: 1))
                         .annotation(position: .top, spacing: 2,
                                     overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
                             tooltip(point)
                         }
                     PointMark(x: .value("时间", point.time), y: .value("功率", point.watts))
-                        .foregroundStyle(Palette.brand)
+                        .foregroundStyle(SettingsStyle.orange)
                         .symbolSize(36)
                 }
             }
@@ -165,19 +155,19 @@ struct ChargingCurve: View {
             .chartXAxis {
                 AxisMarks(values: Self.timeTicks(start: start, end: now, minutes: span.tickMinutes)) { _ in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
-                        .foregroundStyle(Palette.hatch)
+                        .foregroundStyle(SettingsStyle.line)
                     AxisValueLabel(format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
-                        .foregroundStyle(Palette.heading)
+                        .foregroundStyle(SettingsStyle.gray)
                 }
             }
             .chartYAxis {
                 AxisMarks(position: .leading, values: axis.ticks) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
-                        .foregroundStyle(Palette.hatch)
+                        .foregroundStyle(SettingsStyle.line)
                     AxisValueLabel {
                         if let watts = value.as(Double.self) {
                             Text(String(format: "%g W", watts))
-                                .foregroundStyle(Palette.heading)
+                                .foregroundStyle(SettingsStyle.gray)
                         }
                     }
                 }
@@ -203,9 +193,9 @@ struct ChargingCurve: View {
             }
         }
         .font(.system(size: 12))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(SettingsStyle.gray)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.inset))
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(SettingsStyle.cream))
     }
 
     private func tooltip(_ point: PowerSample) -> some View {
@@ -220,7 +210,7 @@ struct ChargingCurve: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Capsule().fill(Palette.brand))
+            .background(Capsule().fill(SettingsStyle.orange))
     }
 
     // MARK: 统计
@@ -251,12 +241,11 @@ struct ChargingCurve: View {
             ForEach(items, id: \.0) { item in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.0)
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 10))
+                        .foregroundStyle(SettingsStyle.gray)
                     Text(item.1)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13, weight: .bold))
                         .monospacedDigit()
-                        .foregroundStyle(Palette.ink)
                 }
             }
             Spacer(minLength: 0)

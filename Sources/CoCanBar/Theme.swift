@@ -75,24 +75,3 @@ struct DotLabel: View {
         .lineLimit(1)
     }
 }
-
-/// 卡片外的分组标题，照小程序的「实时调度」「电量统计」。
-struct SectionHeading: View {
-    let title: String
-    var detail: String?
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Palette.heading)
-            Spacer(minLength: 8)
-            if let detail {
-                Text(detail)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 4)
-    }
-}

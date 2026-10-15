@@ -1,7 +1,7 @@
 import SwiftUI
 import CoCanKit
 
-// 面板和桌面小组件共用的配色、格式和小部件。
+// 面板和桌面小组件共用的配色、格式和小部件。设置窗口照 KangCharge 的配色另见 `SettingsStyle`。
 
 /// 面板配色，照小程序的 wxss 和场景模式配色表（scene-mode.js）：
 /// 奶油底 #F8F5EC、白卡片、正文 #121212、单位灰 #B8B8B8、品牌橙红 #FF4719、在线绿 #00C539。
@@ -12,7 +12,7 @@ public enum Palette {
     public static let online = Color(hex: 0x00C539)
     public static let danger = Color(hex: 0xFF3B30)
 
-    /// 面板和「调节」页的底色。
+    /// 面板的底色。
     public static let canvas = Adaptive(light: Color(hex: 0xF8F5EC), dark: Color(hex: 0x1C1B19))
     public static let card = Adaptive(light: .white, dark: Color(hex: 0x292724))
     public static let cardStroke = Adaptive(light: .black.opacity(0.03), dark: .white.opacity(0.06))
@@ -78,17 +78,6 @@ public extension ChargingStrategy {
         case .usbA: return "arrow.triangle.2.circlepath"
         case .highPerformance: return "gauge.with.dots.needle.67percent"
         case .ultraFastSinglePort: return "arrow.right.circle"
-        }
-    }
-
-    /// 「调节」页模式格子里的两行说明，按词断行。
-    var tileDetail: String {
-        switch self {
-        case .fast: return "FluxAI\n多设备按需分配"
-        case .slow: return "夜间慢充\n避免电池久满电"
-        case .usbA: return "小家电模式\nC 口模拟 A 口"
-        case .highPerformance: return "C1 无线损\n最大化效率"
-        case .ultraFastSinglePort: return "关闭其他口\nC1 独享"
         }
     }
 }

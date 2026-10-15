@@ -23,9 +23,9 @@ The menu bar panel, light and dark. With a port selected, the detail strip shows
 
 <img src="docs/screenshots/panel.png" width="640" alt="Menu bar panel, light and dark">
 
-Live dispatch table and connected devices on the Adjust tab of the settings window:
+The Adjust tab of the settings window, laid out and coloured after [KangCharge](https://github.com/LeiZiKang/KangCharge):
 
-<img src="docs/screenshots/settings-ports.png" width="540" alt="Live dispatch table and connected devices">
+<img src="docs/screenshots/settings-controls.png" width="760" alt="Adjust tab of the settings window">
 
 Charging curves. Left: all ports combined over 2 hours; the break is a period without records (app not running or charger offline). Right: one port over 30 minutes, with the reading under the pointer:
 
@@ -43,7 +43,9 @@ While the menu bar app isn't running, the widget reads the LAN by itself; the re
 
 ## Interface
 
-Styled after the 「电控」 (power control) page of the official WeChat mini program: cream background, white cards, orange-red brand colour; follows the system light or dark appearance.
+The menu bar panel and the widgets are styled after the 「电控」 (power control) page of the official WeChat mini program: cream background, white cards, orange-red brand colour.
+The settings window follows the main window of [KangCharge](https://github.com/LeiZiKang/KangCharge) (MIT) in layout and colours: cream background, white cards, a single orange accent; the code is written separately.
+Everything follows the system light or dark appearance; KangCharge is light only, so the dark appearance uses warm dark greys of the same tone.
 
 - **Menu bar**: a bolt plus the total power of all online chargers. The item has a fixed width, so it doesn't shift as readings change.
 - **Panel**:
@@ -63,12 +65,13 @@ Styled after the 「电控」 (power control) page of the official WeChat mini p
   - 「端口开关、功率分配和全部调节…」 (port switches, power allocation and all settings…) opens the Adjust tab of the settings window.
 - **Settings window**:
   - 调节 (Adjust):
-    - live dispatch table: each port's protocol, voltage, current, power, chip temperature and switch;
-    - connected devices: each port's device, battery level and health, PD profile, cable, session energy and chip temperature;
+    - header: charger name and connection status; with several chargers, switch between them at the top right, next to refresh and the general settings;
+    - charging mode: strategy buttons, charging status and a thermal-mode shortcut;
+    - power diagram: one cable per port to a drawing of the charger, labelled with each port's power and protocol and the total; greyed out while offline;
+    - ports: each port's device or state, protocol, voltage, current, power, chip temperature and switch;
+    - charger info, thermal mode, display (brightness; CP02S display options when the charger reports support) and port power allocation (temporary);
     - charging curve: one port or all ports combined, the last 30 minutes or 2 hours;
-    - charging mode, thermal mode, display brightness;
-    - port power allocation (temporary);
-    - CP02S display options, when the charger reports support.
+    - connected devices: each port's device, battery level and health, PD profile, cable, session energy and chip temperature.
   - 设备 (Devices): name, PSN, host, MCP URL (stored in the Keychain), plus test connection, scan the LAN and delete charger.
   - 通用 (General): refresh interval, launch at login.
 
@@ -126,7 +129,7 @@ All of these need an MCP URL; every MCP tool they use is read-only.
 - Chip temperature: `die_temperature` from `get_port_details`. The official MCP gives a level, not degrees.
   - Shown as 凉爽 (cool), 温和 (mild), 偏热 (warm) and 过热 (hot), coloured green, yellow, orange and red.
   - Mild and warm have been seen in testing, and cool appears in the PD status; hot (`hot`) is inferred from the naming and hasn't been seen.
-  - Shown in the temperature column of the live dispatch table, in the connected devices list and in the panel's detail strip; not shown for empty ports.
+  - Shown in the Ports card of the Adjust tab, in the connected devices list and in the panel's detail strip; not shown for empty ports.
 - Session energy: the energy delivered since the device was plugged in.
   - `session_charge_mwh` from `get_port_details` is authoritative and is read together with identification.
   - Between reads it's extrapolated from the increase of the LAN `session_charge`, so the number moves with the readings every few seconds.
@@ -340,6 +343,8 @@ swift build
   7. cloud readings (LAN unreachable: one charger on cloud readings, one reachable neither way).
 - `--demo-window`: puts the panel in an ordinary window right below the main screen's menu bar. On recent macOS versions menu bar items are hosted by a system process, so a MenuBarExtra panel can't be opened from the program; an ordinary window shows the real rendering instead.
 - `--demo-settings [devices|general]`: opens a settings page in another window, the Adjust tab by default.
+  - `--demo-settings-device <name>`: shows this charger on the Adjust tab, the first one by default;
+  - `--demo-cp02s`: behaves as a CP02S, so the display card also shows status display mode, idle display and hourly chime.
 - `--demo-menu`: opens the first card's 「调节」 menu once the window is up.
 - `--demo-light`: light appearance; dark by default.
 - `--demo-capture <directory>`: exports the demo window's content as a PNG at 4 and at 8 seconds.
