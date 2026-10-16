@@ -80,8 +80,8 @@ enum PanelSnapshots {
     /// `--demo-menu`：演示窗口放回后，自动弹出第一张卡片的「调节」菜单，用来截图核对菜单弹出的位置。
     static let openMenuNotification = Notification.Name("CoCanBarDemoOpenMenu")
 
-    /// `--demo-settings [devices|general]`：再开一个普通窗口显示设置页。默认是「调节」页，
-    /// 窗口加高到不用滚动，检查整页表单排版；`devices`、`general` 换成另外两页，大小和真实窗口一样。
+    /// `--demo-settings [devices|general]`：再开一个普通窗口显示设置页。默认是「调节」页；
+    /// 「调节」「设备」页加高到不用滚动，检查整页排版；`general` 和真实窗口一样大。
     /// `--demo-settings-device <名称>`：「调节」页看哪台设备（默认第一台），用来核对离线、云端这些状态。
     static func showDemoSettingsIfRequested(model: AppModel) {
         let arguments = CommandLine.arguments
@@ -95,7 +95,7 @@ enum PanelSnapshots {
             try? await Task.sleep(for: .seconds(0.5))
             let content: AnyView
             switch page {
-            case "devices": content = AnyView(DevicesSettings().frame(width: 1080, height: 720))
+            case "devices": content = AnyView(DevicesSettings().frame(width: 1080, height: 960))
             case "general": content = AnyView(GeneralSettings().frame(width: 1080, height: 720))
             default: content = AnyView(ControlsSettings().frame(width: 1080, height: 1500))
             }

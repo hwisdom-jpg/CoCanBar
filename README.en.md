@@ -41,6 +41,23 @@ While the menu bar app isn't running, the widget reads the LAN by itself; the re
 
 ![Widget while the menu bar app isn't running](docs/screenshots/widgets-direct.png)
 
+## Getting started
+
+There is no prebuilt download yet: an app for other people to install needs Developer ID signing and notarization, which hasn't been done. Build it yourself with Xcode, see [Building](#building).
+
+1. **Build and open**: run `./scripts/build-app.sh` and open the resulting `build/小电拼.app`. When macOS asks for Local Network access, click Allow.
+2. **Bind your charger**: copy the charger's MCP URL in the mini program and paste it on the 「设备」 (Devices) tab of the settings window; the steps are in [First-time setup](#first-time-setup).
+   Chargers added only by scanning the LAN show readings but can't be controlled; switches and settings need the MCP URL.
+3. **Everyday use**:
+   - Readings: the menu bar shows the total power of all online chargers. Click it to open the panel, with one card per charger; click a port to see its protocol, voltage, current and the connected device.
+   - Port on / off: click the port in the panel and use the switch in the detail strip, or use the switches in the Ports card on the Adjust tab of the settings window. Turning off a port that is supplying power asks first.
+   - Charging strategy, thermal mode, display brightness: the 「调节」 (Adjust) menu at the top right of each card, or the mode, thermal and display cards on the Adjust tab. Switching the strategy asks first.
+   - Temporary power allocation: 「临时功率分配」 (power allocation) on the Adjust tab → 「调整分配」 (adjust), drag one slider per port, click 「应用…」 (apply) and confirm. All ports renegotiate when it's applied.
+   - Power curves and connected devices: the 「充电曲线」 (charging curve) and 「在充设备」 (connected devices) cards at the bottom of the Adjust tab.
+   - Several chargers: one card each in the panel; switch between them at the top right of the Adjust tab.
+   - Opening the settings window: 「设置…」 (Settings…) under the gear at the top right of the panel, or 「端口开关、功率分配和全部调节…」 in the Adjust menu.
+   - Desktop widget and Shortcuts: see [Desktop widget](#desktop-widget) and [Shortcuts](#shortcuts).
+
 ## Interface
 
 The menu bar panel and the widgets are styled after the 「电控」 (power control) page of the official WeChat mini program: cream background, white cards, orange-red brand colour.
@@ -264,9 +281,18 @@ xcrun swift scripts/make-icon.swift Support/AppIcon-source.png Support/AppIcon.i
 1. Open `build/小电拼.app`. When the system asks for Local Network access, click Allow, or LAN readings won't work.
    - You can also turn it on later in System Settings › Privacy & Security › Local Network.
    - Per Apple's TN3179, the desktop widget uses the app's permission.
-2. Open the panel, choose 「设置…」 (Settings…) from the gear at the top right, go to the 「设备」 (Devices) tab and add a charger in either of these ways:
-   - paste the MCP URL copied from the mini program's 「MCP 指南」 (MCP guide); the PSN is detected from the URL;
-   - or click 「扫描局域网」 (scan LAN) and add a discovered `cp02-<PSN>`. This gives readings only; for control, paste the MCP URL as well.
+2. Get the MCP URL: in the WeChat mini program 「制糖工厂 CANDYSIGN」, open the charger, go to 「MCP 指南」 (MCP guide) and copy its MCP URL.
+   - It looks like `https://mcp.thecandysign.com/<PSN>/<token>/mcp`. The token works like a control password for that charger; don't share it.
+   - Each charger has its own URL; copy one per charger.
+3. Open the panel, choose 「设置…」 (Settings…) from the gear at the top right, go to the 「设备」 (Devices) tab and add a charger in either of these ways:
+   - paste the URL into the 「MCP 地址」 (MCP URL) field under 「添加设备」 (add charger) and click 「用 MCP 地址添加」 (add with MCP URL). The PSN is detected from the URL and the URL goes into the Keychain;
+   - or click 「扫描局域网」 (scan LAN) and add a discovered `cp02-<PSN>`. This gives readings only; for control, paste the MCP URL into that charger's card as well and click 「保存地址」 (save URL).
+4. Click 「测试连接」 (test connection) in the charger's card. 「连接正常：服务提供 N 个工具」 (connected, the service offers N tools) means it's bound.
+   - You can rename it to something like 「书桌」 (desk) or 「沙发」 (sofa); the name is saved when you press Return or leave the field.
+   - The host can usually stay empty; it defaults to `cp02-<PSN>.local`.
+5. To have readings right after login, turn on 「登录时启动」 (launch at login) on the 「通用」 (General) tab.
+
+<img src="docs/screenshots/settings-devices.png" width="560" alt="Devices tab of the settings window">
 
 Chargers can also be imported in bulk with launch arguments. The app extracts every official MCP URL from the file and stores them in the Keychain:
 
