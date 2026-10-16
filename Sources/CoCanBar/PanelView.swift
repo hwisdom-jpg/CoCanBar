@@ -279,7 +279,7 @@ struct EmptyCard: View {
             Text("还没有设备")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(Palette.ink)
-            Text("在设置里扫描局域网，或粘贴小程序「MCP 指南」里的 MCP 地址。")
+            Text("在设置里扫描局域网，或粘贴从小程序「龙虾服务」复制的内容。")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

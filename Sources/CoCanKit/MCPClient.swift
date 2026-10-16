@@ -17,7 +17,7 @@ public enum MCPError: Error, LocalizedError, Sendable, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .unauthorized: return "MCP token 无效或已失效，请在小程序「MCP 指南」重新获取地址"
+        case .unauthorized: return "MCP token 无效或已失效，请在小程序「龙虾服务」重新复制"
         case .http(let code): return "MCP 服务返回 HTTP \(code)"
         case .network(let message): return "MCP 网络错误：\(message)"
         case .rpc(let code, let message): return "MCP 错误 \(code)：\(message)"

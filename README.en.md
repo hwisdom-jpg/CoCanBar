@@ -46,7 +46,7 @@ While the menu bar app isn't running, the widget reads the LAN by itself; the re
 There is no prebuilt download yet: an app for other people to install needs Developer ID signing and notarization, which hasn't been done. Build it yourself with Xcode, see [Building](#building).
 
 1. **Build and open**: run `./scripts/build-app.sh` and open the resulting `build/小电拼.app`. When macOS asks for Local Network access, click Allow.
-2. **Bind your charger**: copy the charger's MCP URL in the mini program and paste it on the 「设备」 (Devices) tab of the settings window; the steps are in [First-time setup](#first-time-setup).
+2. **Bind your charger**: tap copy on the mini program's 「龙虾服务」 page and paste the whole text on the 「设备」 (Devices) tab of the settings window; the steps are in [First-time setup](#first-time-setup).
    Chargers added only by scanning the LAN show readings but can't be controlled; switches and settings need the MCP URL.
 3. **Everyday use**:
    - Readings: the menu bar shows the total power of all online chargers. Click it to open the panel, with one card per charger; click a port to see its protocol, voltage, current and the connected device.
@@ -281,12 +281,16 @@ xcrun swift scripts/make-icon.swift Support/AppIcon-source.png Support/AppIcon.i
 1. Open `build/小电拼.app`. When the system asks for Local Network access, click Allow, or LAN readings won't work.
    - You can also turn it on later in System Settings › Privacy & Security › Local Network.
    - Per Apple's TN3179, the desktop widget uses the app's permission.
-2. Get the MCP URL: in the WeChat mini program 「制糖工厂 CANDYSIGN」, open the charger, go to 「MCP 指南」 (MCP guide) and copy its MCP URL.
-   - It looks like `https://mcp.thecandysign.com/<PSN>/<token>/mcp`. The token works like a control password for that charger; don't share it.
-   - Each charger has its own URL; copy one per charger.
+2. Get the MCP URL: in the WeChat mini program 「制糖工厂 CANDYSIGN」, open the charger, tap 「设置」 (Settings) at the bottom, open 「龙虾服务」 (AI 自主控制, "AI control") under 「核心功能」 (core features) and tap the copy button.
+   - What you copy is a whole paragraph of install instructions for an AI assistant. It contains the charger's MCP URL, which looks like `https://mcp.thecandysign.com/<PSN>/<token>/sse`. There's no need to pick it out; paste the whole paragraph into CoCanBar.
+   - The default 「接入模型」 (model) OpenClaw is fine and gives a URL ending in `/sse`. With another model the URL may end in `/mcp`, which also works. The token is the same; CoCanBar connects via `/mcp` either way.
+   - The URL shown on the page is masked; only the copied text is complete. The token works like a control password for that charger; don't share it.
+   - If the charger's licence doesn't include this feature, tapping 「龙虾服务」 opens a subscription page. Users on a shared trial can't see the URL.
+   - When the owner taps 「重置 MCP 密钥」 (reset MCP key), the old URL stops working at once. Copy it again and replace it in the charger's card in CoCanBar.
+   - Each charger has its own URL; copy once per charger.
 3. Open the panel, choose 「设置…」 (Settings…) from the gear at the top right, go to the 「设备」 (Devices) tab and add a charger in either of these ways:
-   - paste the URL into the 「MCP 地址」 (MCP URL) field under 「添加设备」 (add charger) and click 「用 MCP 地址添加」 (add with MCP URL). The PSN is detected from the URL and the URL goes into the Keychain;
-   - or click 「扫描局域网」 (scan LAN) and add a discovered `cp02-<PSN>`. This gives readings only; for control, paste the MCP URL into that charger's card as well and click 「保存地址」 (save URL).
+   - paste the copied text into the 「MCP 地址」 (MCP URL) field under 「添加设备」 (add charger) and click 「用 MCP 地址添加」 (add with MCP URL). The PSN is detected from the URL and the URL goes into the Keychain;
+   - or click 「扫描局域网」 (scan LAN) and add a discovered `cp02-<PSN>`. This gives readings only; for control, paste the copied text into that charger's card as well and click 「保存地址」 (save URL).
 4. Click 「测试连接」 (test connection) in the charger's card. 「连接正常：服务提供 N 个工具」 (connected, the service offers N tools) means it's bound.
    - You can rename it to something like 「书桌」 (desk) or 「沙发」 (sofa); the name is saved when you press Return or leave the field.
    - The host can usually stay empty; it defaults to `cp02-<PSN>.local`.
@@ -294,7 +298,7 @@ xcrun swift scripts/make-icon.swift Support/AppIcon-source.png Support/AppIcon.i
 
 <img src="docs/screenshots/settings-devices.png" width="560" alt="Devices tab of the settings window">
 
-Chargers can also be imported in bulk with launch arguments. The app extracts every official MCP URL from the file and stores them in the Keychain:
+Chargers can also be imported in bulk with launch arguments. The app extracts every official MCP URL from the file (including ones ending in `/sse`) and stores them in the Keychain:
 
 ```bash
 open build/小电拼.app --args --import <file containing MCP URLs> --rename <PSN>=Sofa
@@ -304,7 +308,7 @@ open build/小电拼.app --args --import <file containing MCP URLs> --rename <PS
 
 - The charger list (names, PSNs, hosts) is stored in `UserDefaults` (`com.local.CoCanBar`), without secrets.
 - MCP URLs are stored in the login Keychain as generic passwords, with the service name `com.local.CoCanBar.mcp` and the PSN as the account.
-- Only URLs of the form `https://mcp.thecandysign.com/<PSN>/<token>/mcp` are accepted, so the token is never sent to another host.
+- Only URLs of the form `https://mcp.thecandysign.com/<PSN>/<token>/mcp` or `…/sse` are accepted (`/sse` becomes `/mcp`). When a whole paragraph is pasted, only URLs on that host are taken from it, so the token is never sent to another host.
 - MCP requests don't follow redirects; a 3xx response is treated as an error.
 - The interface shows URLs only with the token removed. Error messages don't include URLs, and error text returned by the server is redacted before it's shown.
 - LAN readings verify the charger's identity:

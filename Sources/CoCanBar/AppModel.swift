@@ -110,7 +110,7 @@ enum AppError: LocalizedError {
         switch self {
         case .noMCP: return "还没保存这台设备的 MCP 地址"
         case .mcpMismatch: return "MCP 地址里的 PSN 和这台设备不一致"
-        case .invalidMCP: return "不是有效的官方 MCP 地址（应为 https://mcp.thecandysign.com/<PSN>/<token>/mcp）"
+        case .invalidMCP: return "没找到官方 MCP 地址：请在小程序「龙虾服务」里点复制，整段粘贴进来"
         }
     }
 }
@@ -842,8 +842,10 @@ final class AppModel {
     func device(_ psn: String) -> DeviceConfig? { devices.first { $0.psn == psn } }
 
     /// 保存一条 MCP 地址到钥匙串；`expectedPSN` 不为空时要求 PSN 一致。
+    /// `raw` 可以只是地址，也可以是小程序「龙虾服务」复制出来的整段文字。
     func saveMCP(_ raw: String, expectedPSN: String? = nil) throws -> MCPEndpoint {
-        guard let endpoint = MCPEndpoint(string: raw) else { throw AppError.invalidMCP }
+        let found = MCPEndpoint(string: raw).map { [$0] } ?? MCPEndpoint.extractAll(from: raw)
+        guard let endpoint = found.first(where: { $0.psn == expectedPSN }) ?? found.first else { throw AppError.invalidMCP }
         if let expectedPSN, endpoint.psn != expectedPSN { throw AppError.mcpMismatch }
         try keychain.save(endpoint.url.absoluteString, account: endpoint.psn, label: "小电拼 MCP \(endpoint.psn)")
         clients[endpoint.psn] = nil

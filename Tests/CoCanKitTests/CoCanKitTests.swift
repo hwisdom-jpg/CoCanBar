@@ -172,6 +172,10 @@ final class CoCanKitTests: XCTestCase {
         XCTAssertEqual(endpoint.url.absoluteString, "https://mcp.thecandysign.com/1234567890123456/abcd1234/mcp")
         XCTAssertFalse(endpoint.redacted.contains("abcd1234"))
 
+        // 小程序按接入模型给 /sse 或 /mcp，token 相同，统一走 /mcp
+        let sse = try XCTUnwrap(MCPEndpoint(string: "https://mcp.thecandysign.com/1234567890123456/abcd1234/sse"))
+        XCTAssertEqual(sse.url.absoluteString, "https://mcp.thecandysign.com/1234567890123456/abcd1234/mcp")
+
         let rejected = [
             "http://mcp.thecandysign.com/1234567890123456/abcd1234/mcp",
             "https://evil.example.com/1234567890123456/abcd1234/mcp",
@@ -180,9 +184,20 @@ final class CoCanKitTests: XCTestCase {
             "https://user@mcp.thecandysign.com/1234567890123456/abcd1234/mcp",
             "https://mcp.thecandysign.com:8443/1234567890123456/abcd1234/mcp",
             "https://mcp.thecandysign.com/12ab/abcd1234/mcp",
-            "https://mcp.thecandysign.com/1234567890123456/abcd1234/sse",
+            "https://mcp.thecandysign.com/1234567890123456/abcd1234/http",
+            "https://mcp.thecandysign.com/1234567890123456/SKILL.md",
         ]
         for raw in rejected { XCTAssertNil(MCPEndpoint(string: raw), raw) }
+    }
+
+    func testExtractFromMiniProgramCopy() {
+        // 小程序「龙虾服务」点复制得到的整段文字（PSN 和 token 是假的）
+        let text = "现在安装控制「AI 小电拼 CP02」的技能：阅读 `https://mcp.thecandysign.com/1234567890123456/SKILL.md`。"
+            + "这台小电拼的名字是「桌子」。MCP 服务器的地址是 `https://mcp.thecandysign.com/1234567890123456/abcd1234/sse`。"
+        XCTAssertNil(MCPEndpoint(string: text))
+        XCTAssertEqual(MCPEndpoint.extractAll(from: text).map(\.url.absoluteString),
+                       ["https://mcp.thecandysign.com/1234567890123456/abcd1234/mcp"])
+        XCTAssertTrue(MCPEndpoint.extractAll(from: "https://mcp.thecandysign.com/1234567890123456/abcd1234/ssex").isEmpty)
     }
 
     func testExtractAllDeduplicatesByPSN() {

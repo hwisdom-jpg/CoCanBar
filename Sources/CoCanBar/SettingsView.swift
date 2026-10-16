@@ -72,7 +72,7 @@ struct DevicesSettings: View {
             VStack(alignment: .leading, spacing: 14) {
                 CardTitle(title: "添加设备")
                 FormField(title: "MCP 地址") {
-                    SecureField("MCP 地址", text: $newURL, prompt: Text("从小程序「MCP 指南」复制后粘贴"))
+                    SecureField("MCP 地址", text: $newURL, prompt: Text("粘贴从小程序「龙虾服务」复制的内容"))
                         .settingsField()
                 }
                 HStack(spacing: 8) {
@@ -196,7 +196,7 @@ struct DeviceEditor: View {
             }
             FormField(title: configured ? "替换 MCP 地址" : "MCP 地址") {
                 SecureField(configured ? "替换地址" : "MCP 地址", text: $urlDraft,
-                            prompt: Text(configured ? "粘贴新的 MCP 地址" : "从小程序「MCP 指南」复制后粘贴"))
+                            prompt: Text(configured ? "粘贴新的 MCP 地址" : "粘贴从小程序「龙虾服务」复制的内容"))
                     .settingsField()
             }
             HStack(spacing: 8) {
