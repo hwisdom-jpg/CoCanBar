@@ -21,11 +21,97 @@ final class ChargerDriverTests: XCTestCase {
     }
 
     func testExplicitDriverAndLocalIDRoundTrip() {
-        let id = ChargerID(driver: "cuktech", localID: "AA:BB:CC:DD:EE:FF")
-        XCTAssertEqual(ChargerID(storedKey: id.namespaced), id)
-        XCTAssertEqual(id.legacyStorageKey, "cuktech:AA:BB:CC:DD:EE:FF")
-        XCTAssertEqual(id.lookupKeys, ["cuktech:AA:BB:CC:DD:EE:FF"])
-        XCTAssertNil(id.directReadingToken, "带冒号的编号不进直读文件名")
+        for mac in ["aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF"] {
+            let id = ChargerID(driver: "cuktech", localID: mac)
+            XCTAssertEqual(ChargerID(storedKey: id.namespaced), id)
+            XCTAssertEqual(id.legacyStorageKey, "cuktech:\(mac)")
+            XCTAssertEqual(id.lookupKeys, ["cuktech:\(mac)"])
+            XCTAssertNil(id.directReadingToken, "带冒号的编号不进直读文件名")
+        }
+    }
+
+    func testSavedDeviceWithExplicitDriverPreservesLocalID() {
+        // 即使本地编号本身像带前缀的身份，也不能在已指定 driver 时再拆一次。
+        for localID in ["aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF", psn, "cuktech:unit-1"] {
+            let device = SavedDevice(psn: localID, name: "测试设备", driver: "cuktech")
+            XCTAssertEqual(device.chargerID.driver, "cuktech")
+            XCTAssertEqual(device.psn, localID)
+            XCTAssertEqual(device.id, "cuktech:\(localID)")
+        }
+        let legacy = SavedDevice(psn: psn, name: "书桌", driver: ChargerID.candySign)
+        XCTAssertEqual(legacy.psn, psn)
+        XCTAssertEqual(legacy.id, psn)
+    }
+
+    func testSavedDeviceWithoutDriverAcceptsLegacyAndNamespacedIDs() {
+        let cases: [(key: String, driver: String, localID: String, storageKey: String)] = [
+            (psn, "candysign", psn, psn),
+            ("candysign:\(psn)", "candysign", psn, psn),
+            ("AA:BB:CC:DD:EE:FF", "candysign", "AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF"),
+            ("cuktech:aa:bb:cc:dd:ee:ff", "cuktech", "aa:bb:cc:dd:ee:ff", "cuktech:aa:bb:cc:dd:ee:ff"),
+            ("cuktech:AA:BB:CC:DD:EE:FF", "cuktech", "AA:BB:CC:DD:EE:FF", "cuktech:AA:BB:CC:DD:EE:FF"),
+        ]
+        for driver in [nil, ""] as [String?] {
+            for item in cases {
+                let device = SavedDevice(psn: item.key, name: "测试设备", driver: driver)
+                XCTAssertEqual(device.chargerID.driver, item.driver)
+                XCTAssertEqual(device.psn, item.localID)
+                XCTAssertEqual(device.id, item.storageKey)
+            }
+        }
+    }
+
+    func testDeviceConfigWithExplicitDriverPreservesLocalID() throws {
+        for localID in ["aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF", psn, "cuktech:unit-1"] {
+            // 缺失、null 和空 id 都应退回 driver + psn 路径。
+            for idField in ["", #""id":null,"#, #""id":"","#] {
+                let json = """
+                {\(idField)"driver":"cuktech","psn":"\(localID)","name":"测试设备","hostOverride":"test.local","lastStrategy":1}
+                """
+                let device = try JSONDecoder().decode(SavedDevice.self, from: Data(json.utf8))
+                XCTAssertEqual(device.chargerID.driver, "cuktech")
+                XCTAssertEqual(device.psn, localID)
+                XCTAssertEqual(device.id, "cuktech:\(localID)")
+                XCTAssertEqual(device.name, "测试设备")
+                XCTAssertEqual(device.hostOverride, "test.local")
+                XCTAssertEqual(device.lastStrategy, 1)
+
+                let encoded = try JSONEncoder().encode(device)
+                let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+                XCTAssertEqual(object["id"] as? String, "cuktech:\(localID)")
+                XCTAssertEqual(object["driver"] as? String, "cuktech")
+                XCTAssertEqual(object["psn"] as? String, localID)
+                XCTAssertEqual(try JSONDecoder().decode(SavedDevice.self, from: encoded), device)
+            }
+        }
+    }
+
+    func testDeviceConfigAcceptsNamespacedMACWithoutDriver() throws {
+        for mac in ["aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF"] {
+            for key in ["id", "psn"] {
+                for driverField in ["", #""driver":null,"#, #""driver":"","#] {
+                    let json = """
+                    {\(driverField)"\(key)":"cuktech:\(mac)","name":"测试设备"}
+                    """
+                    let device = try JSONDecoder().decode(SavedDevice.self, from: Data(json.utf8))
+                    XCTAssertEqual(device.chargerID.driver, "cuktech")
+                    XCTAssertEqual(device.psn, mac)
+                    XCTAssertEqual(device.id, "cuktech:\(mac)")
+                }
+            }
+        }
+    }
+
+    func testDeviceConfigNamespacedIDTakesPrecedence() throws {
+        for mac in ["aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF"] {
+            let json = """
+            {"id":"cuktech:\(mac)","driver":"candysign","psn":"\(psn)","name":"测试设备"}
+            """
+            let device = try JSONDecoder().decode(SavedDevice.self, from: Data(json.utf8))
+            XCTAssertEqual(device.chargerID.driver, "cuktech")
+            XCTAssertEqual(device.psn, mac)
+            XCTAssertEqual(device.id, "cuktech:\(mac)")
+        }
     }
 
     func testUppercaseOrShortPrefixStaysLegacy() {
@@ -100,6 +186,14 @@ final class ChargerDriverTests: XCTestCase {
         XCTAssertEqual(byDriver.chargerID, byPSN.chargerID)
         XCTAssertEqual(byID.chargerID, byPSN.chargerID)
         XCTAssertEqual(byPSN.id, psn, "存盘键仍是裸 PSN")
+        for device in [byPSN, byDriver, byID] {
+            let encoded = try JSONEncoder().encode(device)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+            XCTAssertEqual(object["psn"] as? String, psn)
+            XCTAssertNil(object["driver"], "各种小电拼输入形式都继续写成旧配置")
+            XCTAssertNil(object["id"])
+            XCTAssertEqual(try JSONDecoder().decode(SavedDevice.self, from: encoded), device)
+        }
 
         let other = try JSONDecoder().decode(SavedDevice.self, from: Data("""
         {"id":"esphome:plug-1","driver":"esphome","psn":"plug-1","name":"入户计量"}

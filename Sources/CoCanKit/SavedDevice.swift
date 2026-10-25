@@ -16,10 +16,10 @@ public struct SavedDevice: Codable, Identifiable, Hashable, Sendable {
     /// 驱动自己的编号。小电拼是 PSN，这时和 `id` 相同。
     public var psn: String { chargerID.localID }
 
+    /// 显式指定 driver 时，psn 是完整的本地编号；否则才尝试解析身份前缀。
     public init(psn: String, name: String, hostOverride: String? = nil, lastStrategy: Int? = nil, driver: String? = nil) {
         if let driver, !driver.isEmpty {
-            let parsed = ChargerID(storedKey: psn)
-            chargerID = ChargerID(driver: driver, localID: parsed.localID)
+            chargerID = ChargerID(driver: driver, localID: psn)
         } else {
             chargerID = ChargerID(storedKey: psn)
         }
@@ -40,11 +40,10 @@ public struct SavedDevice: Codable, Identifiable, Hashable, Sendable {
         if let rawID = try container.decodeIfPresent(String.self, forKey: .id), !rawID.isEmpty {
             chargerID = ChargerID(storedKey: rawID)
         } else if let psn = try container.decodeIfPresent(String.self, forKey: .psn) {
-            let parsed = ChargerID(storedKey: psn)
             if let driver = try container.decodeIfPresent(String.self, forKey: .driver), !driver.isEmpty {
-                chargerID = ChargerID(driver: driver, localID: parsed.localID)
+                chargerID = ChargerID(driver: driver, localID: psn)
             } else {
-                chargerID = parsed
+                chargerID = ChargerID(storedKey: psn)
             }
         } else {
             throw DecodingError.dataCorruptedError(
