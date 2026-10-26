@@ -113,8 +113,6 @@ enum AppError: LocalizedError {
 @MainActor
 @Observable
 final class AppModel {
-    static let maxBudgetWatts = 160.0
-
     private(set) var devices: [DeviceConfig] = []
     private(set) var runtime: [String: DeviceRuntime] = [:]
     private(set) var mcpConfigured: Set<String> = []
@@ -225,8 +223,13 @@ final class AppModel {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
+                // 间隔从一轮开始算：有设备离线时一轮要等解析和请求超时（3–7 秒），不然实际间隔是「设置的秒数 + 超时」，
+                // 在线设备的读数也会跟着变慢，极端时超过 isOnline 的窗口闪一下离线。读取比间隔还慢时至少歇 1 秒。
+                let started = ContinuousClock.now
                 await self.refreshAll()
-                try? await Task.sleep(for: .seconds(self.pollInterval))
+                let elapsed = started.duration(to: ContinuousClock.now)
+                let wait = max(Duration.seconds(self.pollInterval) - elapsed, Duration.seconds(1))
+                try? await Task.sleep(for: wait)
             }
         }
     }
@@ -476,13 +479,15 @@ final class AppModel {
             guard currentLoad[psn] == ticket else { return }
             mutate(psn) {
                 if let f { $0.control.facts = f }
-                // 读取期间用户改过设置时，以刚设置的值为准
-                guard $0.control.revision == revision else { return }
-                $0.control.temperature = t
-                $0.control.display = d.level
-                $0.control.statusMode = d.statusMode
-                $0.control.idleDisplay = d.idleDisplay
-                $0.control.hourlyChime = d.hourlyChime
+                // 读取期间用户改过设置时，以刚设置的值为准：读到的（可能已经过时的）值只补上还没有值的项，不覆盖。
+                // 以前是整份丢掉，loadedAt 留空，「调节」页会一直显示“正在读取当前设置…”
+                let fresh = $0.control.revision == revision
+                if fresh || $0.control.temperature == nil { $0.control.temperature = t }
+                if fresh || $0.control.display == nil { $0.control.display = d.level }
+                if fresh || $0.control.statusMode == nil { $0.control.statusMode = d.statusMode }
+                if fresh || $0.control.idleDisplay == nil { $0.control.idleDisplay = d.idleDisplay }
+                if fresh || $0.control.hourlyChime == nil { $0.control.hourlyChime = d.hourlyChime }
+                // 这项是设备报的能力，不是用户改的
                 $0.control.supportsExtendedDisplay = d.supportsExtendedOptions
                 $0.control.loadedAt = Date()
                 $0.control.loadError = nil

@@ -71,6 +71,9 @@ final class WidgetBridge {
         let snapshot = model.widgetSnapshot(now: now)
         let change = snapshot.change(since: lastWritten)
         guard force || change == .state || now.timeIntervalSince(lastWrittenAt) >= Self.writeInterval else { return }
+        // 上一份快照已经超过 1 分钟（Mac 睡过一觉、或者一轮读取卡了很久）：小组件可能已经当 app 没在运行，
+        // 改成自己读局域网、把开关变灰。这份写完要马上刷新，不按平时的节流等 5–14 分钟
+        let resumed = lastWritten != nil && now.timeIntervalSince(lastWrittenAt) >= WidgetSnapshot.appAliveWindow
         do {
             try store.writeSnapshot(snapshot)
         } catch {
@@ -83,7 +86,7 @@ final class WidgetBridge {
         }
         lastWritten = snapshot
         lastWrittenAt = now
-        if force {
+        if force || resumed {
             reload(snapshot, now: now)
         } else {
             scheduleReload(for: snapshot, now: now)
