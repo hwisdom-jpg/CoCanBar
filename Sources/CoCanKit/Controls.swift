@@ -225,11 +225,4 @@ public extension MCPClient {
     func setHourlyChime(_ enabled: Bool) async throws -> String {
         try await callTool("set_hourly_chime", arguments: ["enabled": .bool(enabled)])
     }
-
-    /// 正在充电的端口号（从 1 开始），来自 `get_charging_status` 的位掩码。
-    func chargingPorts() async throws -> Set<Int> {
-        let value = try await callToolJSON("get_charging_status")
-        guard let mask = value["status_bitmask"]?.intValue else { return [] }
-        return Set((0..<16).filter { mask & (1 << $0) != 0 }.map { $0 + 1 })
-    }
 }

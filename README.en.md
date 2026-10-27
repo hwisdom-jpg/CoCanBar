@@ -202,6 +202,7 @@ Right-click an empty area of the desktop → 「编辑小组件」 (Edit Widgets
 - While the menu bar app is running:
   - The widget shows the snapshot the app writes. After reading LAN data the app writes at most every 10 seconds; it writes immediately when a switch, plug-in, online status or notice changes.
   - The system decides how often widgets refresh. For changes such as switches or plug-ins the app asks for a refresh at most every 30 seconds; for power-only changes at most every 5 minutes; and every 14 minutes even when nothing notable changed, so readings don't get marked as stale. After a switch is tapped on the widget, it refreshes as soon as the command finishes.
+    The first snapshot written after a gap of more than a minute (for example after the Mac wakes from sleep) also triggers an immediate refresh: in the meantime the widget may have decided the app was gone and switched to reading the LAN itself.
   - The refresh button asks the app to read the LAN right away, waits for the new snapshot (up to 3 seconds), then refreshes.
 - While the menu bar app isn't running (no snapshot written for 1 minute, or it has quit), the widget reads the LAN by itself on each refresh:
   - It reads only the charger's home page and `metrics.json`. No token is needed, and the widget has no access to one.

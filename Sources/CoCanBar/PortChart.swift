@@ -277,33 +277,6 @@ struct PowerBar: View {
     }
 }
 
-/// 接口图形：A 口是带舌片的矩形，C 口是胶囊。
-struct PortGlyph: View {
-    let typeA: Bool
-    var scale: CGFloat = 1
-
-    var body: some View {
-        if typeA {
-            ZStack(alignment: .top) {
-                RoundedRectangle(cornerRadius: 0.8 * scale)
-                    .strokeBorder(lineWidth: scale)
-                Rectangle()
-                    .frame(width: 8 * scale, height: 1.2 * scale)
-                    .padding(.top, 1.4 * scale)
-            }
-            .frame(width: 14 * scale, height: 5 * scale)
-        } else {
-            ZStack {
-                Capsule()
-                    .strokeBorder(lineWidth: scale)
-                Capsule()
-                    .frame(width: 6 * scale, height: 1.2 * scale)
-            }
-            .frame(width: 13 * scale, height: 5 * scale)
-        }
-    }
-}
-
 /// 品牌色的开关（小程序「实时调度」里的橙色开关）。显示的是端口的实际状态，点按只发出请求，读数刷新后才变。
 struct PortSwitch: View {
     let isOn: Bool
