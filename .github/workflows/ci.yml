@@ -6,6 +6,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # 可以手动重跑：失败修好之后想只重跑一次，或者想验证某个分支而不发 PR。
+  workflow_dispatch:
 
 jobs:
   test:

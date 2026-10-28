@@ -32,6 +32,8 @@
 - `scripts/build-app-local.sh`：`build-app.sh` 的只编当前架构版本。
   通用构建在这台机器上会撞 Swift 宏插件报错，自用可以只编 arm64。
 - `Support/AppIconCool.icns`：蓝色渐变的 app 图标，给冷色调时的面板头部用。Finder 里始终是暖色那版。
+- CI 加 `workflow_dispatch`，可以手动重跑。原来只有 push 到 `main` 和 `pull_request` 两个触发条件，
+  失败修好之后想只重跑一次、或者想验证某个分支而不发 PR，都得靠再推一个提交。
 
 ### 改动
 
