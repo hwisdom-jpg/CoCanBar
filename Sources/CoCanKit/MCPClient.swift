@@ -45,7 +45,7 @@ public actor MCPClient {
     /// 每次 `reset()` 加 1：旧一代的握手结果不再写回，同一代会话过期时只重新握手一次。
     private var generation = 0
 
-    public init(endpoint: MCPEndpoint, clientVersion: String = "0.1.0", timeout: TimeInterval = 20) {
+    public init(endpoint: MCPEndpoint, clientVersion: String = "0.2.0", timeout: TimeInterval = 20) {
         self.endpoint = endpoint
         self.clientVersion = clientVersion
         let config = URLSessionConfiguration.ephemeral

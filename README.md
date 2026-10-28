@@ -2,7 +2,17 @@
 
 简体中文 | [English](README.en.md)
 
-[![CI](https://github.com/yangyihang96/CoCanBar/actions/workflows/ci.yml/badge.svg)](https://github.com/yangyihang96/CoCanBar/actions/workflows/ci.yml)
+[![CI](https://github.com/hwisdom-jpg/CoCanBar/actions/workflows/ci.yml/badge.svg)](https://github.com/hwisdom-jpg/CoCanBar/actions/workflows/ci.yml)
+
+> **这是衍生版。**
+>
+> 原项目是 [yangyihang96/CoCanBar](https://github.com/yangyihang96/CoCanBar)，作者 yangyihang96，MIT 协议。
+> 这里是从上游 `b5ab162` 分出来的一份，只改了我自己用着不顺手的地方：菜单栏和 app 图标换成官网的糖标、
+> 加了一套冷色调配色，具体见 [CHANGELOG.md](CHANGELOG.md)。
+>
+> 上游的项目和作者才是这个 app 的来处。这些改动同时提了
+> [PR #3](https://github.com/yangyihang96/CoCanBar/pull/3) 给上游，目前还开着、还没合。
+> 如果哪天合了，请优先用官方版本，这份就只留作备份。发现了 bug，先看是不是只有这里才有，再决定提给谁。
 
 制糖工厂「小电拼」（CP02 / CoCan）的 Mac 菜单栏 app，非官方第三方工具：
 
@@ -434,6 +444,14 @@ swift build
   - app 没运行时小组件自己读局域网：同一个读取函数已在两台实机上用 `cocan-probe lan-check` 核对过，
     但还没有在真实的小组件扩展里跑过；扩展沿用 app 的本地网络权限，是按 Apple TN3179 的说明推断的。
   - 目前核对的是离屏截图，还没有在真实桌面上逐个尺寸核对过；点小组件能不能打开 app 也还没核对。
+
+### 这个衍生版自己的
+
+- 和上游版本用的是同一个 bundle id（`com.local.CoCanBar`），两个不能同时装，装这个会把上游那个覆盖掉。
+  从上游切换过来时，钥匙串里的 MCP 地址和 App Group 里的数据都还在，不用重新配对。
+- 不跟上游自动同步。上游更新了要手动合，步骤见 [CHANGELOG.md](CHANGELOG.md) 最后一段。
+- 打包脚本用的是 `scripts/build-app-local.sh`（只编当前架构）。上游的 `build-app.sh` 编通用二进制，
+  在我这台机器上会撞 Swift 宏插件的报错，两个脚本都在，按自己的机器选。
   - 小组件上的端口开关和刷新按钮还没有在实机上端到端测过。
 - 快捷指令：动作已经编进 app，系统也已登记，但还没有在「快捷指令」app 里实际运行过。
 
@@ -456,3 +474,6 @@ docs/screenshots/        README 里的截图（演示数据）
 ## 许可证
 
 MIT，见 [LICENSE](LICENSE)。
+
+那里面写的版权人 `yangyihang96` 是原作者，文件保持原样、没有改动。这个衍生版的修改同样按 MIT 发布，
+不额外附加条款；再用、再改、商用都可以，只要把 LICENSE 和这句版权声明一起带上。

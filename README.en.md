@@ -2,7 +2,19 @@
 
 [简体中文](README.md) | English
 
-[![CI](https://github.com/yangyihang96/CoCanBar/actions/workflows/ci.yml/badge.svg)](https://github.com/yangyihang96/CoCanBar/actions/workflows/ci.yml)
+[![CI](https://github.com/hwisdom-jpg/CoCanBar/actions/workflows/ci.yml/badge.svg)](https://github.com/hwisdom-jpg/CoCanBar/actions/workflows/ci.yml)
+
+> **This is a fork.**
+>
+> The original project is [yangyihang96/CoCanBar](https://github.com/yangyihang96/CoCanBar) by yangyihang96, MIT licensed.
+> This copy branched from upstream `b5ab162` and only changes what I wanted for my own use: the menu bar and app
+> icon now use the candy mark from the official site, and there is a second cool-toned colour scheme. Details in
+> [CHANGELOG.md](CHANGELOG.md).
+>
+> Upstream and its author are where this app comes from. These changes are also submitted upstream as
+> [PR #3](https://github.com/yangyihang96/CoCanBar/pull/3), still open and unmerged. If it ever lands, prefer the
+> official version and treat this one as a backup. If you hit a bug, check whether it only happens here before
+> deciding where to report it.
 
 An unofficial macOS menu bar app for CANDYSIGN (制糖工厂) 小电拼 chargers (CP02 / CoCan). It is a third-party tool, not affiliated with or endorsed by CANDYSIGN. The interface is in Simplified Chinese; Chinese labels are quoted below with an English gloss.
 
