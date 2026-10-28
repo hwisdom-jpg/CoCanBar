@@ -13,6 +13,9 @@
 > 上游的项目和作者才是这个 app 的来处。这些改动同时提了
 > [PR #3](https://github.com/yangyihang96/CoCanBar/pull/3) 给上游，目前还开着、还没合。
 > 如果哪天合了，请优先用官方版本，这份就只留作备份。发现了 bug，先看是不是只有这里才有，再决定提给谁。
+>
+> 装完想确认是哪一份，看版本号：上游是 `0.1.0`，这里是 `0.2.0`。
+> `defaults read /Applications/小电拼.app/Contents/Info.plist CFBundleShortVersionString`
 
 制糖工厂「小电拼」（CP02 / CoCan）的 Mac 菜单栏 app，非官方第三方工具：
 

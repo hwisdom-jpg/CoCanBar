@@ -15,6 +15,9 @@
 > [PR #3](https://github.com/yangyihang96/CoCanBar/pull/3), still open and unmerged. If it ever lands, prefer the
 > official version and treat this one as a backup. If you hit a bug, check whether it only happens here before
 > deciding where to report it.
+>
+> To check which build you have, look at the version: upstream is `0.1.0`, this one is `0.2.0`.
+> `defaults read /Applications/小电拼.app/Contents/Info.plist CFBundleShortVersionString`
 
 An unofficial macOS menu bar app for CANDYSIGN (制糖工厂) 小电拼 chargers (CP02 / CoCan). It is a third-party tool, not affiliated with or endorsed by CANDYSIGN. The interface is in Simplified Chinese; Chinese labels are quoted below with an English gloss.
 
