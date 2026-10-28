@@ -30,6 +30,14 @@ An unofficial macOS menu bar app for CANDYSIGN (制糖工厂) 小电拼 chargers
 
 Product and company names are trademarks of their respective owners.
 
+## Web version (also runs on Windows and Linux)
+
+There is a browser version too: [hwisdom-jpg/cocan-web](https://github.com/hwisdom-jpg/cocan-web). One dependency-free Node script plus a few static files; install Node 18 and it runs, with no code signing and no 7-day certificate expiry, on Windows and Linux as well.
+
+Everything you can read or change matches this app: the power diagram, per-port readings, charging strategy, individual port switches, thermal mode, the status display, temporary power allocation, charging curves, connected devices, and both colour schemes.
+
+What it lacks is being *always there*: the menu bar icon, the desktop widget, Shortcuts and system notifications — a web page can't do those, and isn't trying to. The two live side by side; neither replaces the other.
+
 ## Screenshots
 
 All screenshots use demo data.
